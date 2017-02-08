@@ -1,0 +1,29 @@
+#include <stdbool.h>
+#include "node.h"
+#include "bsp.h"
+#include "rtc_cc430.h"
+#include "lpw_cc430.h"
+#include "task_scheduler.h"
+#include "soft_timer.h"
+
+//#include "tmpsnr/tmpsnr.h"
+
+
+
+/**************************************************
+ * PUBLIC FUNCTIONS
+ *************************************************/
+bool node_init(void)
+{
+    /* hardware-related initialization */
+    BSP_Init();
+    rtc_init();
+    lpw_init();
+
+    /* software-related initialization */
+    task_pool_init();
+    soft_initTimers();
+    tmpsnr_registerMsgProcessor(); /* register RF msg processors */
+
+    return true;
+}

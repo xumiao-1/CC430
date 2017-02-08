@@ -1,0 +1,7 @@
+1450767458649	Delete resource 'Project/CC430F6137-EndDevice'
+1450770618708	Delete resource 'Project/Components/bsp/uart_intfc_cc430.h'
+1450850553248	Delete resource 'Project/Components/bsp/uart_cc430.c'
+1451150888106	Delete resource 'Project/Components/bsp/uart/uart_intfc_cc430.c'
+1451151079815	Delete resource 'Project/Components/bsp/uart/uart_cc430.c'
+1451151337153	Delete resource 'Project/Components/bsp/uart'
+1451151342548	Delete resource 'Project/Components/bsp/Peripheral'

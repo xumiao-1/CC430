@@ -1,0 +1,15 @@
+#ifndef _NODE_H_
+#define _NODE_H_
+
+
+#define NODE_TYPE    (NODE_WRKSTN)
+
+/**************************************************
+ * PUBLIC FUNCTIONS
+ *************************************************/
+bool node_init(void);
+
+
+
+#endif // _NODE_H_
+// eof...

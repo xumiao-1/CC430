@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Delete resource &apos;Project/Components/common/platform_ind/task_scheduler.h&apos;" deleteContents="false" description="Delete resource &apos;Project/Components/common/platform_ind/task_scheduler.h&apos;" element1="/Project/Components/common/platform_ind/task_scheduler.h" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1473298176613"/>
+</session>

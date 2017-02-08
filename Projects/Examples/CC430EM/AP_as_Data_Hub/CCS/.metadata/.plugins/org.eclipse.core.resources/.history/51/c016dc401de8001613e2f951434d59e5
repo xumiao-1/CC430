@@ -1,0 +1,23 @@
+#include "mydef.h"
+
+uint32_t gNextWkup = 0;
+
+
+
+/**************************************************
+ * PUBLIC FUNCTIONS
+ *************************************************/
+bool initNode(void)
+{
+    /* hardware init */
+    BSP_Init();
+
+    /* software init */
+    task_pool_init();
+    rtc_init();
+    lpw_init();
+    soft_initTimers();
+}
+
+
+// eof...
