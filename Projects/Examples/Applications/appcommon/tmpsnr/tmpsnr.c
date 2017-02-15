@@ -17,6 +17,7 @@
 #include "utils.h"
 #include "../mydef.h"
 #include "tmpsnr.h"
+#include "../node.h"
 
 
 #define AWAKE_INTERVAL (5000)
@@ -72,8 +73,8 @@ void tmpsnr_task_addDevice(uint16_t arg) {
 }
 
 void tmpsnr_task_sleep(uint16_t arg) {
-    bsp_turn_off_green_led();
-    bsp_turn_off_red_led();
+    node_turn_off_green_led();
+    node_turn_off_red_led();
     lpw_enterSleep();
 }
 
@@ -96,8 +97,8 @@ void tmpsnr_tmr_awakeISR(uint16_t arg) {
 }
 
 void tmpsnr_task_mytask(uint16_t arg) {
-    bsp_turn_on_green_led();
-    bsp_turn_on_red_led();
+    node_turn_on_green_led();
+    node_turn_on_red_led();
 
     /* send time stamp to peers */
     log(LOG_DEBUG, "time = %u, next wkup = %u",

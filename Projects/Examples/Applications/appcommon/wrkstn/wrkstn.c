@@ -14,6 +14,8 @@
 #include "utils.h"
 #include "../mydef.h"
 #include "wrkstn.h"
+#include "../node.h"
+
 
 typedef void (*msg_processor_t)(pkt_app_t*);
 

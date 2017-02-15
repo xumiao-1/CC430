@@ -158,8 +158,8 @@ static volatile uint8_t sBlinky = 0;
 //}
 
 void task_mytask(uint16_t arg) {
-    bsp_turn_on_green_led();
-    bsp_turn_on_red_led();
+    node_turn_on_green_led();
+    node_turn_on_red_led();
 
     /* send time stamp to peers */
     log(LOG_DEBUG, "[mytask] time = %u, next wkup = %u",
@@ -188,8 +188,8 @@ void task_mytask(uint16_t arg) {
 }
 
 void task_sleep(uint16_t arg) {
-    bsp_turn_off_green_led();
-    bsp_turn_off_red_led();
+    node_turn_off_green_led();
+    node_turn_off_red_led();
     lpw_enterSleep();
 }
 
@@ -239,12 +239,12 @@ void main(void) {
 
 
     while (SMPL_SUCCESS != SMPL_Init(sCB)) {
-        bsp_toggle_red_led();
+        node_toggle_red_led();
         SPIN_ABOUT_A_QUARTER_SECOND;
     }
     /* green and red LEDs on solid to indicate waiting for a Join. */
-    bsp_turn_on_green_led();
-    bsp_turn_off_red_led();
+    node_turn_on_green_led();
+    node_turn_off_red_led();
 
 //	/* test flash */
 //	ExtenalFlash_Read((uint8_t*) rdbuf, FLASH_ADDRESS, strlen(buf));

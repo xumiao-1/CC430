@@ -19,7 +19,7 @@
  you may not use, reproduce, copy, prepare derivative works of, modify, distribute,
  perform, display or sell this Software and/or its documentation for any purpose.
 
- YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE PROVIDED 揂S IS�
+ YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE PROVIDED 鎻係 IS锟�
  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION, ANY
  WARRANTY OF MERCHANTABILITY, TITLE, NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE.
  IN NO EVENT SHALL TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -96,14 +96,14 @@ void main(void) {
      * successful. Toggle LEDS to indicate that joining has not occurred.
      */
     while (SMPL_SUCCESS != SMPL_Init(sCB)) {
-        bsp_toggle_red_led();
-        bsp_toggle_green_led();
+        node_toggle_red_led();
+        node_toggle_green_led();
         SPIN_ABOUT_A_QUARTER_SECOND;
         log(LOG_DEBUG, "trying to join a network...");
     }
     /* LEDs on solid to indicate successful join. */
-    bsp_turn_on_green_led();
-    bsp_turn_on_red_led();
+    node_turn_on_green_led();
+    node_turn_on_red_led();
 
     /* Unconditional link to AP which is listening due to successful join. */
     linkTo();
@@ -116,15 +116,15 @@ void main(void) {
 static void linkTo() {
     /* Keep trying to link... */
     while (SMPL_SUCCESS != SMPL_Link(&sLinkID1)) {
-        bsp_toggle_green_led();
-        bsp_toggle_red_led();
+        node_toggle_green_led();
+        node_toggle_red_led();
         SPIN_ABOUT_A_SECOND;
         log(LOG_DEBUG, "trying to link to the AP...");
     }
 
     /* Turn off LEDs. */
-    bsp_turn_off_green_led();
-    bsp_turn_off_red_led();
+    node_turn_off_green_led();
+    node_turn_off_red_led();
 
     /* turn on RX. default is RX off. */
     SMPL_Ioctl(IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_RXON, 0);
