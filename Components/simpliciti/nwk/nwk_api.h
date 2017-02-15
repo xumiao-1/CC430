@@ -1,8 +1,8 @@
 /**************************************************************************************************
   Filename:       nwk_api.h
-  Revised:        $Date: 2008-11-24 12:09:31 -0800 (Mon, 24 Nov 2008) $
-  Revision:       $Revision: 18508 $
-  Author:         $Author: lfriedman $
+  Revised:        $Date: 2011-10-26 15:44:58 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28059 $
+  Author:         $Author: jnoxon $
 
   Description:    This header file supports the SimpliciTI appliction layer API.
 
@@ -33,7 +33,7 @@
   contact Texas Instruments Incorporated at www.TI.com.
 **************************************************************************************************/
 
-#ifndef NWK_API_H
+#ifndef NWK_API_H  
 #define NWK_API_H
 
 /* Tx options (bit map) */

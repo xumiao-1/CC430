@@ -1,7 +1,7 @@
 /**************************************************************************************************
   Filename:       bsp_board.c
-  Revised:        $Date: 2009-10-11 16:48:20 -0700 (Sun, 11 Oct 2009) $
-  Revision:       $Revision: 20896 $
+  Revised:        $Date: 2011-09-29 10:13:10 -0700 (Thu, 29 Sep 2011) $
+  Revision:       $Revision: 27756 $
 
   Copyright 2008-2009 Texas Instruments Incorporated.  All rights reserved.
 
@@ -58,7 +58,7 @@ static void Bsp_SetClocks(void);
  *                                            Defines
  * ------------------------------------------------------------------------------------------------
  */
-#define BSP_TIMER_CLK_MHZ   12       /* 12 MHz MCLKC and SMCLK */
+#define BSP_TIMER_CLK_MHZ   BSP_CONFIG_CLOCK_MHZ       /* MCLKC and SMCLK */
 #define BSP_DELAY_MAX_USEC  (0xFFFF/BSP_TIMER_CLK_MHZ)
 
 /**************************************************************************************************
@@ -156,6 +156,33 @@ static void Bsp_SetVCore(void)
  */
 static void Bsp_SetClocks(void)
 {
+#ifdef FREQUENCY_HOPPING
+  /* configure cpu clock for BSP_CLOCK_MHZ (13 MHz for 26 MHz crystal on xt2) */
+
+  /* turn on the xt2 oscillator */
+  UCSCTL6 &= ~XT2OFF;
+
+  /* wait for the xt2 oscillator to stablize */
+  while( UCSCTL7 &= ~XT2OFFG, UCSCTL7 & XT2OFFG );
+
+  /* set all clocks to use xt2 clock with a divide by 2 value */
+  UCSCTL5 = DIVM__2 | DIVS__2 | DIVA__2 | DIVPA__1;  // 13 MHz
+  UCSCTL4 = SELM__XT2CLK | SELS__XT2CLK | SELA__XT2CLK;
+
+  /* disable the modulation on the DCO */
+  UCSCTL1 |= DISMOD;
+
+  /* turn off the unnecessary clock sources */
+  __bis_SR_register( SCG0 | SCG1 | OSCOFF );
+
+  /* wait for clocks to stabalize */
+  while( SFRIFG1 & OFIFG )
+  {
+    UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + DCOFFG);
+    SFRIFG1 &= ~OFIFG;
+  }
+
+#else // not FREQUENCY_HOPPING
   /* Configure CPU clock for 12MHz */
 
   /* If clock settings are changed, remember to update BSP_TIMER_CLK_MHZ.
@@ -189,6 +216,7 @@ static void Bsp_SetClocks(void)
 
   /* Select REFO as ACLK source and DCOCLK as MCLK and SMCLK source */
   UCSCTL4 = SELA__REFOCLK | SELS__DCOCLKDIV | SELM__DCOCLKDIV;
+#endif // not FREQUENCY_HOPPING
 }
 
 /**************************************************************************************************
@@ -221,6 +249,7 @@ BSP_EARLY_INIT(void)
   return (1);
 }
 
+#ifndef MRFI_TIMER_ALWAYS_ACTIVE
 /**************************************************************************************************
  * @fn          BSP_InitBoard
  *
@@ -274,3 +303,5 @@ void BSP_Delay(uint16_t usec)
   /* Clear the interrupt flag */
    TA0CCTL0 &= ~CCIFG;
 }
+
+#endif // not MRFI_TIMER_ALWAYS_ACTIVE

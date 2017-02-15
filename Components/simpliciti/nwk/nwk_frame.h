@@ -1,8 +1,8 @@
 /**************************************************************************************************
   Filename:       nwk_frame.h
-  Revised:        $Date: 2008-12-23 13:49:41 -0800 (Tue, 23 Dec 2008) $
-  Revision:       $Revision: 18651 $
-  Author:         $Author: lfriedman $
+  Revised:        $Date: 2011-10-26 15:37:41 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28058 $
+  Author:         $Author: jnoxon $
 
   Description:    This header file supports the SimpliciTI frame handling functions.
 
@@ -135,7 +135,7 @@ void          nwk_receiveFrame(void);
 void          nwk_frameInit(uint8_t (*)(linkID_t));
 smplStatus_t  nwk_retrieveFrame(rcvContext_t *, uint8_t *, uint8_t *, addr_t *, uint8_t *);
 smplStatus_t  nwk_sendFrame(frameInfo_t *, uint8_t txOption);
-frameInfo_t  *nwk_getSandFFrame(mrfiPacket_t *, uint8_t);
+frameInfo_t  *nwk_getSandFFrame(mrfiPacket_t *, uint8_t, uint8_t *);
 uint8_t       nwk_getMyRxType(void);
 void          nwk_SendEmptyPollRspFrame(mrfiPacket_t *);
 #ifdef APP_AUTO_ACK

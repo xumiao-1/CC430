@@ -368,6 +368,9 @@ void mrfiSpiSendECBO(uint8_t p, uint8_t k, uint8_t c, uint16_t a);
 uint8_t mrfiSpiBitClear(uint8_t addr, uint8_t bit);
 uint8_t mrfiSpiBitSet(uint8_t addr, uint8_t bit);
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+extern bool sActiveSPI;
+#endif
 /**************************************************************************************************
  */
 #endif

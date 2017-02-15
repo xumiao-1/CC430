@@ -46,6 +46,7 @@
  * ------------------------------------------------------------------------------------------------
  */
 #include "bsp.h"
+#include "pp_utils.h"
 
 /* ------------------------------------------------------------------------------------------------
  *                                           Defines
@@ -57,17 +58,19 @@
  * ------------------------------------------------------------------------------------------------
  */
 #define __mrfi_GDO0_BIT__                     6
-#define MRFI_CONFIG_GDO0_PIN_AS_INPUT()       st( P2SEL &= ~BV(__mrfi_GDO0_BIT__); ) /* clear pin special function default */
-#define MRFI_GDO0_PIN_IS_HIGH()               (P2IN & BV(__mrfi_GDO0_BIT__))
+#define __mrfi_GDO0_PORT__                    2
+#define MRFI_CONFIG_GDO0_PIN_AS_INPUT()       st( INFIX( P, __mrfi_GDO0_PORT__, SEL ) &= ~BV(__mrfi_GDO0_BIT__); ) /* clear pin special function default */
+#define MRFI_GDO0_PIN_IS_HIGH()               ( INFIX( P, __mrfi_GDO0_PORT__, IN ) & BV(__mrfi_GDO0_BIT__))
 
-#define MRFI_GDO0_INT_VECTOR                  PORT2_VECTOR
-#define MRFI_ENABLE_GDO0_INT()                st( P2IE  |=  BV(__mrfi_GDO0_BIT__); ) /* atomic operation */
-#define MRFI_DISABLE_GDO0_INT()               st( P2IE  &= ~BV(__mrfi_GDO0_BIT__); ) /* atomic operation */
-#define MRFI_GDO0_INT_IS_ENABLED()             (  P2IE  &   BV(__mrfi_GDO0_BIT__) )
-#define MRFI_CLEAR_GDO0_INT_FLAG()            st( P2IFG &= ~BV(__mrfi_GDO0_BIT__); ) /* atomic operation */
-#define MRFI_GDO0_INT_FLAG_IS_SET()            (  P2IFG &   BV(__mrfi_GDO0_BIT__) )
-#define MRFI_CONFIG_GDO0_RISING_EDGE_INT()    st( P2IES &= ~BV(__mrfi_GDO0_BIT__); ) /* atomic operation */
-#define MRFI_CONFIG_GDO0_FALLING_EDGE_INT()   st( P2IES |=  BV(__mrfi_GDO0_BIT__); ) /* atomic operation */
+
+#define MRFI_GDO0_INT_VECTOR                  INFIX( PORT, __mrfi_GDO0_PORT__, _VECTOR )
+#define MRFI_ENABLE_GDO0_INT()                st( INFIX( P, __mrfi_GDO0_PORT__, IE )  |=  BV(__mrfi_GDO0_BIT__); ) /* atomic operation */
+#define MRFI_DISABLE_GDO0_INT()               st( INFIX( P, __mrfi_GDO0_PORT__, IE )  &= ~BV(__mrfi_GDO0_BIT__); ) /* atomic operation */
+#define MRFI_GDO0_INT_IS_ENABLED()             (  INFIX( P, __mrfi_GDO0_PORT__, IE )  &   BV(__mrfi_GDO0_BIT__) )
+#define MRFI_CLEAR_GDO0_INT_FLAG()            st( INFIX( P, __mrfi_GDO0_PORT__, IFG ) &= ~BV(__mrfi_GDO0_BIT__); ) /* atomic operation */
+#define MRFI_GDO0_INT_FLAG_IS_SET()            (  INFIX( P, __mrfi_GDO0_PORT__, IFG ) &   BV(__mrfi_GDO0_BIT__) )
+#define MRFI_CONFIG_GDO0_RISING_EDGE_INT()    st( INFIX( P, __mrfi_GDO0_PORT__, IES ) &= ~BV(__mrfi_GDO0_BIT__); ) /* atomic operation */
+#define MRFI_CONFIG_GDO0_FALLING_EDGE_INT()   st( INFIX( P, __mrfi_GDO0_PORT__, IES ) |=  BV(__mrfi_GDO0_BIT__); ) /* atomic operation */
 
 
 /* ------------------------------------------------------------------------------------------------
@@ -75,17 +78,18 @@
  * ------------------------------------------------------------------------------------------------
  */
 #define __mrfi_GDO2_BIT__                     7
-#define MRFI_CONFIG_GDO2_PIN_AS_INPUT()       st( P2SEL &= ~BV(__mrfi_GDO2_BIT__); ) /* clear pin special function default */
-#define MRFI_GDO2_PIN_IS_HIGH()               (P2IN & BV(__mrfi_GDO2_BIT__))
+#define __mrfi_GDO2_PORT__                    2
+#define MRFI_CONFIG_GDO2_PIN_AS_INPUT()       st( INFIX( P, __mrfi_GDO2_PORT__, SEL ) &= ~BV(__mrfi_GDO2_BIT__); ) /* clear pin special function default */
+#define MRFI_GDO2_PIN_IS_HIGH()               ( INFIX( P, __mrfi_GDO2_PORT__, IN ) & BV(__mrfi_GDO2_BIT__))
 
-#define MRFI_GDO2_INT_VECTOR                  PORT2_VECTOR
-#define MRFI_ENABLE_GDO2_INT()                st( P2IE  |=  BV(__mrfi_GDO2_BIT__); ) /* atomic operation */
-#define MRFI_DISABLE_GDO2_INT()               st( P2IE  &= ~BV(__mrfi_GDO2_BIT__); ) /* atomic operation */
-#define MRFI_GDO2_INT_IS_ENABLED()             (  P2IE  &   BV(__mrfi_GDO2_BIT__) )
-#define MRFI_CLEAR_GDO2_INT_FLAG()            st( P2IFG &= ~BV(__mrfi_GDO2_BIT__); ) /* atomic operation */
-#define MRFI_GDO2_INT_FLAG_IS_SET()            (  P2IFG &   BV(__mrfi_GDO2_BIT__) )
-#define MRFI_CONFIG_GDO2_RISING_EDGE_INT()    st( P2IES &= ~BV(__mrfi_GDO2_BIT__); ) /* atomic operation */
-#define MRFI_CONFIG_GDO2_FALLING_EDGE_INT()   st( P2IES |=  BV(__mrfi_GDO2_BIT__); ) /* atomic operation */
+#define MRFI_GDO2_INT_VECTOR                  INFIX( PORT, __mrfi_GDO2_PORT__, _VECTOR )
+#define MRFI_ENABLE_GDO2_INT()                st( INFIX( P, __mrfi_GDO2_PORT__, IE )  |=  BV(__mrfi_GDO2_BIT__); ) /* atomic operation */
+#define MRFI_DISABLE_GDO2_INT()               st( INFIX( P, __mrfi_GDO2_PORT__, IE )  &= ~BV(__mrfi_GDO2_BIT__); ) /* atomic operation */
+#define MRFI_GDO2_INT_IS_ENABLED()             (  INFIX( P, __mrfi_GDO2_PORT__, IE )  &   BV(__mrfi_GDO2_BIT__) )
+#define MRFI_CLEAR_GDO2_INT_FLAG()            st( INFIX( P, __mrfi_GDO2_PORT__, IFG ) &= ~BV(__mrfi_GDO2_BIT__); ) /* atomic operation */
+#define MRFI_GDO2_INT_FLAG_IS_SET()            (  INFIX( P, __mrfi_GDO2_PORT__, IFG ) &   BV(__mrfi_GDO2_BIT__) )
+#define MRFI_CONFIG_GDO2_RISING_EDGE_INT()    st( INFIX( P, __mrfi_GDO2_PORT__, IES ) &= ~BV(__mrfi_GDO2_BIT__); ) /* atomic operation */
+#define MRFI_CONFIG_GDO2_FALLING_EDGE_INT()   st( INFIX( P, __mrfi_GDO2_PORT__, IES ) |=  BV(__mrfi_GDO2_BIT__); ) /* atomic operation */
 
 
 /* ------------------------------------------------------------------------------------------------

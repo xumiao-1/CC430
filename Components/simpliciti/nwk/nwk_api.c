@@ -1,8 +1,8 @@
 /**************************************************************************************************
   Filename:       nwk_api.c
-  Revised:        $Date: 2009-01-28 18:27:38 -0800 (Wed, 28 Jan 2009) $
-  Revision:       $Revision: 18875 $
-  Author:         $Author: lfriedman $
+  Revised:        $Date: 2011-10-26 15:44:58 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28059 $
+  Author:         $Author: jnoxon $
 
   Description:    This file supports the SimpliciTI appliction layer API.
 
@@ -19,7 +19,7 @@
   you may not use, reproduce, copy, prepare derivative works of, modify, distribute,
   perform, display or sell this Software and/or its documentation for any purpose.
 
-  YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE PROVIDED ï¿½AS ISï¿½
+  YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE PROVIDED “AS IS”
   WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION, ANY
   WARRANTY OF MERCHANTABILITY, TITLE, NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE.
   IN NO EVENT SHALL TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -38,7 +38,7 @@
  */
 
 #include <string.h>
-#include "bsp.h"
+#include "bsp.h"  
 #include "mrfi.h"
 #include "nwk_types.h"
 #include "nwk_api.h"
@@ -48,6 +48,10 @@
 #include "mrfi.h"
 #include "nwk_globals.h"
 #include "nwk_freq.h"
+#include "nwk_pll.h"
+#ifdef DEBUG_CRITICAL_SECTIONS
+  #include "bsp_leds.h"
+#endif
 
 /******************************************************************************
  * MACROS
@@ -141,7 +145,8 @@ smplStatus_t SMPL_Init(uint8_t (*f)(linkID_t))
     }
 #endif
     /* don't turn Rx on if we're an end device that isn't always on. */
-#if !defined( END_DEVICE )
+    /* but do turn the radio on for PLL operations */
+#if !defined( END_DEVICE ) || defined( NWK_PLL )
     MRFI_RxOn();
 #endif
 
@@ -152,6 +157,21 @@ smplStatus_t SMPL_Init(uint8_t (*f)(linkID_t))
 #endif
   }
   sInit_done = 1;
+
+#ifdef NWK_PLL
+  /* If the PLL is enabled then it must get running before the join
+   * request or the system may lock up in the join request becuase
+   * PLL is not locked in.
+   */
+  // turn on the PLL
+  SMPL_Ioctl(IOCTL_OBJ_PLL, IOCTL_ACT_ON, NULL);
+  // reference clocks are by definition always locked.
+  #ifndef NWK_PLL_REFERENCE_CLOCK
+    // wait for a 5ms failure rate to be achieved
+    while( nwk_pllIsLocked( 0 ) == false )
+      nwk_pllBackgrounder( false );
+  #endif
+#endif
 
   /* Join. if no AP or Join fails that status is returned. */
   rc = nwk_join();
@@ -258,7 +278,7 @@ smplStatus_t SMPL_Send(linkID_t lid, uint8_t *msg, uint8_t len)
  *
  * output parameters
  *
- * @return   Status of operation. On a failure the frame buffer is discarded
+ * @return   Status of operation. On a filaure the frame buffer is discarded
  *           and the Send call must be redone by the app.
  *             SMPL_SUCCESS
  *             SMPL_BAD_PARAM    No valid Connection Table entry for Link ID
@@ -781,6 +801,11 @@ smplStatus_t SMPL_Ioctl(ioctlObject_t object, ioctlAction_t action, void *val)
 #if defined(FREQUENCY_AGILITY)
     case IOCTL_OBJ_FREQ:
       rc = nwk_freqControl(action, val);
+      break;
+#endif
+#if defined NWK_PLL
+    case IOCTL_OBJ_PLL:
+      rc = nwk_pllControl(action, val);
       break;
 #endif
     case IOCTL_OBJ_FWVER:

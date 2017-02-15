@@ -39,7 +39,43 @@
  *                                          Includes
  * ------------------------------------------------------------------------------------------------
  */
+#include "mrfi.h"
 #include "mrfi_defs.h"
+
+/* ------------------------------------------------------------------------------------------------
+ *                                    Global Constants
+ * ------------------------------------------------------------------------------------------------
+ */
+
+const uint8_t mrfiBroadcastAddr[] = { 0xFF, 0xFF, 0xFF, 0xFF };
+/* verify number of table entries matches the corresponding #define */
+BSP_STATIC_ASSERT(MRFI_ADDR_SIZE == ((sizeof(mrfiBroadcastAddr)/sizeof(mrfiBroadcastAddr[0])) * sizeof(mrfiBroadcastAddr[0])));
+
+
+
+/* ------------------------------------------------------------------------------------------------
+ *                                       Local Variables
+ * ------------------------------------------------------------------------------------------------
+ */
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+
+/* MRFI_Time holds the active time counted by the timer interrupt.
+ * Only bytes beyond the size of the timer are allocated.
+ */
+static volatile uint32_t MRFI_Time = 0;
+
+#endif
+
+
+
+/* ------------------------------------------------------------------------------------------------
+ *                                       Local Prototypes
+ * ------------------------------------------------------------------------------------------------
+ */
+static void Mrfi_RxModeOn(void);
+static void Mrfi_RxModeOff(void);
+static void Mrfi_RandomBackoffDelay(void);
+
 
 
 /* ------------------------------------------------------------------------------------------------

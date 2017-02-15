@@ -81,16 +81,6 @@
 
 
 /* ------------------------------------------------------------------------------------------------
- *                                    Global Constants
- * ------------------------------------------------------------------------------------------------
- */
-const uint8_t mrfiBroadcastAddr[] = { 0xFF, 0xFF, 0xFF, 0xFF };
-
-/* verify number of table entries matches the corresponding #define */
-BSP_STATIC_ASSERT(MRFI_ADDR_SIZE == ((sizeof(mrfiBroadcastAddr)/sizeof(mrfiBroadcastAddr[0])) * sizeof(mrfiBroadcastAddr[0])));
-
-
-/* ------------------------------------------------------------------------------------------------
  *                                    Local Constants
  * ------------------------------------------------------------------------------------------------
  */
@@ -108,6 +98,7 @@ BSP_STATIC_ASSERT(MRFI_ADDR_SIZE == ((sizeof(mrfiBroadcastAddr)/sizeof(mrfiBroad
  *  The static assert below ensures that there is no mismatch.
  */
 #if defined( MRFI_CC2500 ) || defined( MRFI_CC2510 ) || defined( MRFI_CC2511 )
+#ifndef FREQUENCY_HOPPING
 static const uint8_t mrfiLogicalChanTable[] =
 {
   SMARTRF_SETTING_CHANNR,
@@ -115,7 +106,20 @@ static const uint8_t mrfiLogicalChanTable[] =
   202,
   212
 };
+#else
+static const uint8_t mrfiLogicalChanTable[] = // randomized version
+{
+   44,  20,   4,  84, 156,
+   12, 172, 132,  92,  36,
+  148, 108, 164,  68, 180,
+   52,  76, 140, 116, 100,
+   28, 196,  60, 188, 124
+};
+#endif
+
 #elif defined( MRFI_CC1100 ) || defined( MRFI_CC1101 ) || defined( MRFI_CC1110 ) || defined( MRFI_CC1111 )
+
+#ifndef FREQUENCY_HOPPING
 static const uint8_t mrfiLogicalChanTable[] =
 {
   SMARTRF_SETTING_CHANNR,
@@ -123,7 +127,20 @@ static const uint8_t mrfiLogicalChanTable[] =
   80,
   110
 };
+#else
+static const uint8_t mrfiLogicalChanTable[] = // randomized version
+{
+   90, 105,  40,  45,  70,
+   80, 100,   5,  60, 115,
+   15, 125, 120,  50,  95,
+   30,  75,  10,  25,  55,
+  110,  65,  85,  35,  20
+};
+#endif
+
 #elif defined(MRFI_CC1100E_470)
+
+#ifndef FREQUENCY_HOPPING
 static const uint8_t mrfiLogicalChanTable[] =
 {
   SMARTRF_SETTING_CHANNR,
@@ -131,7 +148,20 @@ static const uint8_t mrfiLogicalChanTable[] =
   60,
   80
 };
+#else
+static const uint8_t mrfiLogicalChanTable[] =
+{
+   20,  36,  84,  80,   8,
+   32,  68,  48,  88, 100,
+   28,   4,  40,  16,  76,
+   12,  72,  60,  64,  52,
+   24,  44,  56,  96,  92
+};
+#endif
+
 #elif defined(MRFI_CC1100E_950)
+
+#ifndef FREQUENCY_HOPPING
 static const uint8_t mrfiLogicalChanTable[] =
 {
   SMARTRF_SETTING_CHANNR,
@@ -139,6 +169,17 @@ static const uint8_t mrfiLogicalChanTable[] =
   15,
   20
 };
+#else
+static const uint8_t mrfiLogicalChanTable[] =
+{
+  24,  5,  9, 10, 22,
+   8, 14, 20, 16,  2,
+   1, 25, 11,  7, 18,
+  17, 13, 12,  4,  6,
+   3, 23, 21, 15, 19
+};
+#endif
+
 #else
 #error "ERROR: A valid radio is not specified."
 #endif

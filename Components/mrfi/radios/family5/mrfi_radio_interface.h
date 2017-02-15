@@ -132,6 +132,11 @@
 #define SWORRST     0x3C      /*  SWORRST - Reset real time clock. */
 #define SNOP        0x3D      /*  SNOP    - No operation. Returns status byte. */
 
+/* radio state machine states */
+#define RF_SM_IDLE 0x01       /* radio in idle state */
+#define RF_SM_TX   0x13       /* radio in transmit state */
+#define RF_SM_RX   0x0D       /* radio in receive state */
+
 
 /* ------------------------------------------------------------------------------------------------
  *                                         Prototypes
@@ -144,6 +149,9 @@ void mrfiRadioInterfaceReadRxFifo(uint8_t * pReadData, uint8_t len);
 
 uint8_t mrfiRadioInterfaceCmdStrobe(uint8_t addr);
 uint8_t mrfiRadioInterfaceReadReg(uint8_t addr);
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+extern bool sActiveSPI;
+#endif
 
 /**************************************************************************************************
  */

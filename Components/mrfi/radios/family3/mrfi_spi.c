@@ -1,7 +1,7 @@
 /**************************************************************************************************
   Filename:       mrfi_spi.c
-  Revised:        $Date: 2009-10-18 18:47:34 -0700 (Sun, 18 Oct 2009) $
-  Revision:       $Revision: 20933 $
+  Revised:        $Date: 2011-09-29 10:13:10 -0700 (Thu, 29 Sep 2011) $
+  Revision:       $Revision: 27756 $
 
   Copyright 2008-2009 Texas Instruments Incorporated. All rights reserved.
 
@@ -39,6 +39,9 @@
  * ------------------------------------------------------------------------------------------------
  */
 #include "mrfi_spi.h"
+#ifdef DEBUG_CRITICAL_SECTIONS
+  #include "bsp_leds.h"
+#endif
 
 #define MRFI_SPI_ASSERT(x)        MRFI_ASSERT(x)
 
@@ -70,6 +73,10 @@ static void spiFifoAccess(uint8_t * pData, uint8_t len, uint8_t writeFlag);
 static uint8_t spiSendBytes(uint8_t * pBytes, uint8_t numBytes);
 static void spiWriteRamByte(uint16_t ramAddr, uint8_t byte);
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+bool sActiveSPI = false;
+#endif
+
 /**************************************************************************************************
  * @fn          mrfiSpiInit
  *
@@ -82,6 +89,10 @@ static void spiWriteRamByte(uint16_t ramAddr, uint8_t byte);
  */
 void mrfiSpiInit(void)
 {
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = false; // initialize interface status
+#endif
+
   /* configure all SPI related pins */
   MRFI_SPI_CONFIG_CSN_PIN_AS_OUTPUT();
   MRFI_SPI_CONFIG_SCLK_PIN_AS_OUTPUT();
@@ -208,10 +219,18 @@ static uint8_t spiSendBytes(uint8_t * pBytes, uint8_t numBytes)
   mrfiSpiIState_t s;
   uint8_t returnValue;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
+
   /*-------------------------------------------------------------------------------
    *  Disable interrupts that call SPI functions.
    */
   MRFI_SPI_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   /*-------------------------------------------------------------------------------
    *  Turn chip select "off" and then "on" to clear any current SPI access.
@@ -235,6 +254,10 @@ static uint8_t spiSendBytes(uint8_t * pBytes, uint8_t numBytes)
   *  discarded.
   */
   returnValue = MRFI_SPI_READ_BYTE();
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
 
   /*-------------------------------------------------------------------------------
    *  Turn off chip select.  Enable interrupts that call SPI functions.
@@ -329,6 +352,10 @@ void mrfiSpiReadRam(uint16_t ramAddr, uint8_t *pReadData, uint8_t len)
   mrfiSpiIState_t s;
   uint8_t i;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
+
   /* Address out of range */
   MRFI_SPI_ASSERT(ramAddr <= 0xFFF);
 
@@ -340,6 +367,10 @@ void mrfiSpiReadRam(uint16_t ramAddr, uint8_t *pReadData, uint8_t len)
 
   /* Disable interrupts that call SPI functions. */
   MRFI_SPI_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   /*-------------------------------------------------------------------------------
    *  Turn chip select "off" and then "on" to clear any current SPI access.
@@ -363,6 +394,10 @@ void mrfiSpiReadRam(uint16_t ramAddr, uint8_t *pReadData, uint8_t len)
     /* Fill up the buffer*/
     *pReadData++ = MRFI_SPI_READ_BYTE();
   }
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
 
   /*-------------------------------------------------------------------------------
    *  Turn off chip select and re-enable interrupts that use SPI.
@@ -418,6 +453,9 @@ static void spiFifoAccess(uint8_t * pData, uint8_t len, uint8_t accessType)
 {
   mrfiSpiIState_t s;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
 
   MRFI_SPI_ASSERT(len != 0); /* zero length is not allowed */
 
@@ -425,6 +463,10 @@ static void spiFifoAccess(uint8_t * pData, uint8_t len, uint8_t accessType)
    *  Disable interrupts that call SPI functions.
    */
   MRFI_SPI_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   /*-------------------------------------------------------------------------------
    *  Turn chip select "off" and then "on" to clear any current SPI access.
@@ -507,6 +549,10 @@ static void spiFifoAccess(uint8_t * pData, uint8_t len, uint8_t accessType)
      */
     } while (len); /* inner loop */
   } while (len);   /* main loop */
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
 
   /*-------------------------------------------------------------------------------
    *  Turn off chip select and re-enable interrupts that use SPI.

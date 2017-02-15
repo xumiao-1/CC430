@@ -1,8 +1,8 @@
 /**************************************************************************************************
   Filename:       nwk.c
-  Revised:        $Date: 2009-03-11 15:29:07 -0700 (Wed, 11 Mar 2009) $
-  Revision:       $Revision: 19382 $
-  Author          $Author: lfriedman $
+  Revised:        $Date: 2011-10-26 15:44:58 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28059 $
+  Author          $Author: jnoxon $
 
   Description:    This file supports the SimpliciTI network layer.
 
@@ -40,11 +40,12 @@
 #include "bsp.h"
 #include "mrfi.h"
 #include "nwk_types.h"
-#include "nwk_frame.h"
+#include "nwk_frame.h"  
 #include "nwk.h"
 #include "nwk_app.h"
 #include "nwk_globals.h"
 #include "nwk_QMgmt.h"
+#include "nwk_pll.h"
 
 /******************************************************************************
  * MACROS
@@ -66,6 +67,10 @@
 
 #ifndef MAX_APP_PAYLOAD
 #error ERROR: MAX_APP_PAYLOAD must be defined
+#endif
+
+#if defined NWK_PLL && ( MAX_PAYLOAD < MAX_PLL_APP_FRAME )
+#error ERROR: Application payload size too small for PLL frame
 #endif
 
 #if ( MAX_PAYLOAD < MAX_FREQ_APP_FRAME )
@@ -202,6 +207,9 @@ smplStatus_t nwk_nwkInit(uint8_t (*f)(linkID_t))
   nwk_mgmtInit();
   nwk_linkInit();
   nwk_securityInit();
+#ifdef NWK_PLL
+  nwk_PLLInit();
+#endif
 
   /* set up the last connection as the broadcast port mapped to the broadcast Link ID */
   if (CONNSTATE_FREE == sPersistInfo.connStruct[NUM_CONNECTIONS].connState)
@@ -1057,7 +1065,7 @@ smplStatus_t nwk_NVObj(ioctlAction_t action, ioctlNVObj_t *val)
       *(val->objPtr) = (uint8_t *)&sPersistInfo;
     }
   }
-  else
+  else // unknown action or failed set parameter test
   {
     rc = SMPL_BAD_PARAM;
   }

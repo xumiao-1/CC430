@@ -53,6 +53,9 @@
 #include "nwk_join.h"
 #endif
 
+#ifdef NWK_PLL
+#include "nwk_pll.h"
+#endif
 /******************************************************************************
  * MACROS
  */
@@ -122,6 +125,21 @@ smplStatus_t nwk_rawSend(ioctlRawSend_t *info)
 
   if (pOutFrame = nwk_buildFrame(info->port, info->msg, info->len, hops))
   {
+#ifdef NWK_PLL
+    // get access to the packet data
+    void* pkt = MRFI_P_PAYLOAD(&pOutFrame->mrfiPkt)+F_APP_PAYLOAD_OS;
+    // get a data logging command
+    const uint8_t cmd = ( pll_cmd_LocateReference | pll_cmd_LocateResponse
+                          | pll_cmd_PumpRequest | pll_cmd_PumpResponse );
+    if( info->port == SMPL_PORT_PLL // if sending to a pll port
+           // and its not a data logging packet
+           && ( ((pll_Packet_t*)pkt)->Cmd & cmd ) != cmd )
+    {
+      // update the transmit time stamp address to point
+      // into where the message was copied to
+      MRFI_SetTxTimeStampAddr( &(((pll_Packet_t*)pkt)->Time) );
+    }
+#endif
     memcpy(MRFI_P_DST_ADDR(&pOutFrame->mrfiPkt), info->addr, NET_ADDR_SIZE);
 #ifdef SMPL_SECURE
     nwk_setSecureFrame(&pOutFrame->mrfiPkt, info->len, 0);

@@ -75,8 +75,11 @@
  * ------------------------------------------------------------------------------------------------
  */
 static uint8_t spiRegAccess(uint8_t addrByte, uint8_t writeValue);
-static void spiBurstFifoAccess(uint8_t addrByte, uint8_t * pData, uint8_t len);
+static bool spiBurstFifoAccess(uint8_t addrByte, uint8_t * pData, uint8_t len);
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+bool sActiveSPI = false;
+#endif
 
 /**************************************************************************************************
  * @fn          mrfiSpiInit
@@ -90,6 +93,10 @@ static void spiBurstFifoAccess(uint8_t addrByte, uint8_t * pData, uint8_t len);
  */
 void mrfiSpiInit(void)
 {
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = false; // initialize interface status
+#endif
+
   /* configure all SPI related pins */
   MRFI_SPI_CONFIG_CSN_PIN_AS_OUTPUT();
   MRFI_SPI_CONFIG_SCLK_PIN_AS_OUTPUT();
@@ -120,11 +127,19 @@ uint8_t mrfiSpiCmdStrobe(uint8_t addr)
   uint8_t statusByte;
   mrfiSpiIState_t s;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
+
   MRFI_SPI_ASSERT( MRFI_SPI_IS_INITIALIZED() );       /* SPI is not initialized */
   MRFI_SPI_ASSERT((addr >= 0x30) && (addr <= 0x3D));  /* invalid address */
 
   /* disable interrupts that use SPI */
   MRFI_SPI_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   /* turn chip select "off" and then "on" to clear any current SPI access */
   MRFI_SPI_TURN_CHIP_SELECT_OFF();
@@ -136,6 +151,10 @@ uint8_t mrfiSpiCmdStrobe(uint8_t addr)
 
   /* read the readio status byte returned by the command strobe */
   statusByte = MRFI_SPI_READ_BYTE();
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
 
   /* turn off chip select; enable interrupts that call SPI functions */
   MRFI_SPI_TURN_CHIP_SELECT_OFF();
@@ -204,10 +223,18 @@ static uint8_t spiRegAccess(uint8_t addrByte, uint8_t writeValue)
   uint8_t readValue;
   mrfiSpiIState_t s;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
+
   MRFI_SPI_ASSERT( MRFI_SPI_IS_INITIALIZED() );   /* SPI is not initialized */
 
   /* disable interrupts that use SPI */
   MRFI_SPI_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   /* turn chip select "off" and then "on" to clear any current SPI access */
   MRFI_SPI_TURN_CHIP_SELECT_OFF();
@@ -231,6 +258,10 @@ static uint8_t spiRegAccess(uint8_t addrByte, uint8_t writeValue)
    */
   readValue = MRFI_SPI_READ_BYTE();
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
+
   /* turn off chip select; enable interrupts that call SPI functions */
   MRFI_SPI_TURN_CHIP_SELECT_OFF();
   MRFI_SPI_EXIT_CRITICAL_SECTION(s);
@@ -248,12 +279,12 @@ static uint8_t spiRegAccess(uint8_t addrByte, uint8_t writeValue)
  * @param       pData - pointer for storing write data
  * @param       len   - length of data in bytes
  *
- * @return      none
+ * @return      true if an interrupt was detected during the transfer, false otherwise
  **************************************************************************************************
  */
-void mrfiSpiWriteTxFifo(uint8_t * pData, uint8_t len)
+bool mrfiSpiWriteTxFifo(uint8_t * pData, uint8_t len)
 {
-  spiBurstFifoAccess(TXFIFO | BURST_BIT, pData, len);
+  return spiBurstFifoAccess(TXFIFO | BURST_BIT, pData, len);
 }
 
 
@@ -265,12 +296,12 @@ void mrfiSpiWriteTxFifo(uint8_t * pData, uint8_t len)
  * @param       pData - pointer for storing read data
  * @param       len   - length of data in bytes
  *
- * @return      none
+ * @return      true if an interrupt was detected during the transfer, false otherwise
  **************************************************************************************************
  */
-void mrfiSpiReadRxFifo(uint8_t * pData, uint8_t len)
+bool mrfiSpiReadRxFifo(uint8_t * pData, uint8_t len)
 {
-  spiBurstFifoAccess(RXFIFO | BURST_BIT | READ_BIT, pData, len);
+  return spiBurstFifoAccess(RXFIFO | BURST_BIT | READ_BIT, pData, len);
 }
 
 
@@ -287,12 +318,17 @@ void mrfiSpiReadRxFifo(uint8_t * pData, uint8_t len)
  * @param       pData    - pointer to data to read or write
  * @param       len      - length of data in bytes
  *
- * @return      none
+ * @return      true if an interrupt was detected during the transfer, false otherwise
  *=================================================================================================
  */
-static void spiBurstFifoAccess(uint8_t addrByte, uint8_t * pData, uint8_t len)
+static bool spiBurstFifoAccess(uint8_t addrByte, uint8_t * pData, uint8_t len)
 {
+  bool result = false; // initialize to successful status
   mrfiSpiIState_t s;
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
 
   MRFI_SPI_ASSERT( MRFI_SPI_IS_INITIALIZED() );   /* SPI is not initialized */
   MRFI_SPI_ASSERT(len != 0);                      /* zero length is not allowed */
@@ -300,6 +336,10 @@ static void spiBurstFifoAccess(uint8_t addrByte, uint8_t * pData, uint8_t len)
 
   /* disable interrupts that use SPI */
   MRFI_SPI_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   /* turn chip select "off" and then "on" to clear any current SPI access */
   MRFI_SPI_TURN_CHIP_SELECT_OFF();
@@ -362,6 +402,7 @@ static void spiBurstFifoAccess(uint8_t addrByte, uint8_t * pData, uint8_t len)
       if (MRFI_SPI_CHIP_SELECT_IS_OFF())
       {
         MRFI_SPI_TURN_CHIP_SELECT_ON();
+        result = true;   // indicate interruption detected
         break;
       }
 
@@ -370,9 +411,15 @@ static void spiBurstFifoAccess(uint8_t addrByte, uint8_t * pData, uint8_t len)
     } while (len); /* inner loop */
   } while (len);   /* main loop */
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
+
   /* turn off chip select; enable interrupts that call SPI functions */
   MRFI_SPI_TURN_CHIP_SELECT_OFF();
   MRFI_SPI_EXIT_CRITICAL_SECTION(s);
+  
+  return result;
 }
 
 

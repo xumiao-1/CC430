@@ -54,6 +54,12 @@
 #define BSP_VER       100  /* BSP version 1.00a */
 #define BSP_SUBVER    a
 
+#ifdef FREQUENCY_HOPPING
+  #define FHSS_ACTIVE(a) a
+#else
+  #define FHSS_ACTIVE(a)
+#endif
+
 
 /* ------------------------------------------------------------------------------------------------
  *                                            Clock
@@ -92,8 +98,37 @@
  */
 typedef __bsp_ISTATE_T__  bspIState_t;
 
-#define BSP_ENTER_CRITICAL_SECTION(x)   st( x = __bsp_GET_ISTATE__(); __bsp_DISABLE_INTERRUPTS__(); )
-#define BSP_EXIT_CRITICAL_SECTION(x)    __bsp_RESTORE_ISTATE__(x)
+
+#define DEBUG_HI_PORT_( b )     BSP_TURN_OFF_LED ## b( )
+#define DEBUG_LO_PORT_( b )     BSP_TURN_ON_LED ## b( )
+#define DEBUG_TOGGLE_PORT_( b ) BSP_TOGGLE_LED ## b( )
+#define DEBUG_HI_PORT( b )     DEBUG_HI_PORT_( b )
+#define DEBUG_LO_PORT( b )     DEBUG_LO_PORT_( b )
+#define DEBUG_TOGGLE_PORT( b ) DEBUG_TOGGLE_PORT_( b )
+
+#ifdef DEBUG_CRITICAL_SECTIONS
+#ifndef DEBUG_PORT_1
+  #define DEBUG_PORT_1 1
+#endif
+#ifndef DEBUG_PORT_2
+  #ifdef BSP_BOARD_EXP461x
+    #define DEBUG_PORT_2 3
+  #else
+    #define DEBUG_PORT_2 2
+  #endif
+#endif
+#define BSP_DBG_CRITICAL_START( ) DEBUG_HI_PORT( DEBUG_PORT_1 )
+#define BSP_DBG_CRITICAL_STOP( )  DEBUG_LO_PORT( DEBUG_PORT_1 )
+#else
+#define BSP_DBG_CRITICAL_START( )
+#define BSP_DBG_CRITICAL_STOP( )
+#endif
+#define BSP_ENTER_CRITICAL_SECTION(x)   st( BSP_DBG_CRITICAL_START(); \
+                                            x = __bsp_GET_ISTATE__(); \
+                                            __bsp_DISABLE_INTERRUPTS__(); )
+#define BSP_EXIT_CRITICAL_SECTION(x)    st( __bsp_RESTORE_ISTATE__(x); \
+                                            if( __bsp_INTERRUPTS_ARE_ENABLED__( ) ) \
+                                              BSP_DBG_CRITICAL_STOP(); )
 #define BSP_CRITICAL_STATEMENT(x)       st( bspIState_t s;                    \
                                             BSP_ENTER_CRITICAL_SECTION(s);    \
                                             x;                                \

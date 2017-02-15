@@ -1,8 +1,8 @@
 /**************************************************************************************************
   Filename:       nwk_globals.h
-  Revised:        $Date: 2008-07-30 11:22:21 -0700 (Wed, 30 Jul 2008) $
-  Revision:       $Revision: 17655 $
-  Author:         $Author: lfriedman $
+  Revised:        $Date: 2011-10-26 15:44:58 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28059 $
+  Author:         $Author: jnoxon $
 
   Description:    This header file supports the management of NWK global symbols.
 
@@ -38,7 +38,7 @@
 
 
 /* Prototypes */
-void           nwk_globalsInit(void);
+void           nwk_globalsInit(void);  
 addr_t const  *nwk_getMyAddress(void);
 uint8_t        nwk_setMyAddress(addr_t *addr);
 void           nwk_setAPAddress(addr_t *addr);

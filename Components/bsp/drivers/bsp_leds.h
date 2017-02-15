@@ -15,7 +15,7 @@
   you may not use, reproduce, copy, prepare derivative works of, modify, distribute,
   perform, display or sell this Software and/or its documentation for any purpose.
 
-  YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE PROVIDED ï¿½AS ISï¿½
+  YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE PROVIDED “AS IS”
   WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION, ANY
   WARRANTY OF MERCHANTABILITY, TITLE, NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE.
   IN NO EVENT SHALL TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -63,27 +63,17 @@
 #define BSP_LED_BLINK_DELAY()   st( { volatile uint32_t i; \
                                       for (i=0; i<__bsp_LED_BLINK_LOOP_COUNT__; i++) { }; } )
 
-/* LED1 = green LED */
+/* LED1 */
 #define BSP_TURN_ON_LED1()      __bsp_LED1_TURN_ON__()
 #define BSP_TURN_OFF_LED1()     __bsp_LED1_TURN_OFF__()
 #define BSP_TOGGLE_LED1()       __bsp_LED1_TOGGLE__()
 #define BSP_LED1_IS_ON()        __bsp_LED1_IS_ON__()
 
-#define bsp_turn_on_green_led()      BSP_TURN_ON_LED1()
-#define bsp_turn_off_green_led()     BSP_TURN_OFF_LED1()
-#define bsp_toggle_green_led()       BSP_TOGGLE_LED1()
-#define bsp_is_green_led_on()        BSP_LED1_IS_ON()
-
-/* LED2 = red LED */
+/* LED2 */
 #define BSP_TURN_ON_LED2()      __bsp_LED2_TURN_ON__()
 #define BSP_TURN_OFF_LED2()     __bsp_LED2_TURN_OFF__()
 #define BSP_TOGGLE_LED2()       __bsp_LED2_TOGGLE__()
 #define BSP_LED2_IS_ON()        __bsp_LED2_IS_ON__()
-
-#define bsp_turn_on_red_led()      BSP_TURN_ON_LED2()
-#define bsp_turn_off_red_led()     BSP_TURN_OFF_LED2()
-#define bsp_toggle_red_led()       BSP_TOGGLE_LED2()
-#define bsp_is_red_led_on()        BSP_LED2_IS_ON()
 
 /* LED3 */
 #define BSP_TURN_ON_LED3()      __bsp_LED3_TURN_ON__()

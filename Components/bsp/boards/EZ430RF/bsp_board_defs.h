@@ -63,6 +63,99 @@
 #define __bsp_CLOCK_MHZ__    BSP_CONFIG_CLOCK_MHZ
 
 
+
+/* ------------------------------------------------------------------------------------------------
+ *                                          Timer
+ * ------------------------------------------------------------------------------------------------
+ */
+#ifdef FREQUENCY_HOPPING
+  #ifndef NWK_PLL
+    #define NWK_PLL
+  #endif
+#endif
+
+#if defined NWK_PLL && !defined MRFI_TIMER_ALWAYS_ACTIVE
+  #define MRFI_TIMER_ALWAYS_ACTIVE
+#endif
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  #define BSP_TIMER_A3 0x4133 // 'A' and '3' characters in hex
+  #define BSP_TIMER_B3 0x4233 // 'B' and '7' characters in hex
+
+  #ifndef BSP_TIMER_USED
+    #define BSP_TIMER_USED BSP_TIMER_A3
+  #else // if BSP_TIMER_USED was user defined
+    #if BSP_TIMER_USED != BSP_TIMER_A3 && BSP_TIMER_USED != BSP_TIMER_B3
+      #error "ERROR: The selected timer is invalid, must be BSP_TIMER_A3 or BSP_TIMER_B3."
+    #endif
+  #endif
+  /* Timer A and Timer B are similar enough in operation that either one can be used
+   * for the hardware timer source.  In both cases, the timer is configured in up mode
+   * and used compare register 0 for the interrupt source.  The user can utilize any
+   * other compare registers and the associated interrupts and vector so long as they
+   * do not interfere with the timer operation in any other form.
+   */
+  #define BSP_TIMER_SIZE 16
+  #if BSP_TIMER_USED == BSP_TIMER_A3
+    #define BSP_TIMER_VECTOR TIMERA0_VECTOR
+    #define TxCTL   TACTL
+    #define TxR     TAR
+    #define TxCCR0  TACCR0
+    #define TxCCTL0 TACCTL0
+  #elif BSP_TIMER_USED == BSP_TIMER_B3
+    #define BSP_TIMER_VECTOR TIMERB0_VECTOR
+    #define TxCTL   TBCTL
+    #define TxR     TBR
+    #define TxCCR0  TBCCR0
+    #define TxCCTL0 TBCCTL0
+  #endif
+
+  #define BSP_MAX_MODULATION_MAGNITUDE ( BSP_TIMER_CLK_KHZ * 10 / 100 ) // ten percent
+
+  #define BSP_TIMER_PRESCALE_VALUE 0
+  #define BSP_TIMER_PRESCALE_DIVISOR ( 1 << ( ( BSP_TIMER_PRESCALE_VALUE * 2 )\
+                                       + ( ( BSP_TIMER_PRESCALE_VALUE == 0 ) ? 0 : 1 ) ) )
+#ifndef BSP_CONFIG_CLOCK_KHZ
+  #define BSP_TIMER_CLK_KHZ ((BSP_CLOCK_MHZ * 2000L / BSP_TIMER_PRESCALE_DIVISOR + 1)/2)
+#else
+  #define BSP_TIMER_CLK_KHZ ((BSP_CONFIG_CLOCK_KHZ * 2L / BSP_TIMER_PRESCALE_DIVISOR + 1)/2)
+#endif
+
+  #define BSP_CALC_LIMIT( ticks ) ( ticks )
+
+  #define BSP_ROLLOVER_LIMIT BSP_CALC_LIMIT( BSP_TIMER_CLK_KHZ )
+  #define BSP_TIMER_FREE_RUN_INIT( )\
+            st( BF_SET( TxCTL, 0, 4, 2 );        /* Stop the timer */\
+                TxR = 0;                         /* clear the timer count value */\
+                TxCTL = BF_GEN( 0, 13, 2 )       /* no grouping of capture registers */\
+                        | BF_GEN( 0, 11, 2 )     /* set counter length to 16 bits */\
+                        | BF_GEN( 2, 8, 2 )      /* use smclk as source */\
+                        | BF_GEN( 0, 6, 2 )      /* set prescale to 1 */\
+                        | BF_GEN( 0, 4, 2 )      /* timer remains stopped */\
+                        | BF_GEN( 1, 2, 1 )      /* reset the internal timer state */\
+                        | BF_GEN( 0, 1, 1 )      /* disable interrupts for the moment */\
+                        | BF_GEN( 0, 0, 1 );     /* clear any pending interrupt */\
+                TxCCR0 = (BSP_TIMER_CLK_KHZ - 1); /* initialize count value */\
+                TxCCTL0 = BF_GEN( 0, 14, 2 )     /* disable capture mode */\
+                          | BF_GEN( 2, 12, 2 )   /* disable capture input signal */\
+                          | BF_GEN( 0, 9, 2 )    /* update CCR on write */\
+                          | BF_GEN( 0, 8, 1 )    /* use compare mode */\
+                          | BF_GEN( 0, 4, 1 )    /* disable itnerrupts for the moment */\
+                          | BF_GEN( 0, 1, 1 )    /* clear any pending overflow intrpts */\
+                          | BF_GEN( 0, 0, 1 );   /* clear any pending interrupts */\
+                TxCCTL0 |= BF_GEN( 1, 4, 1 );    /* enable the compare interrupt */\
+                TxCTL |= BF_GEN( 1, 4, 2 );      /* start up the time in up mode */\
+              )
+  #define BSP_TIMER_CHECK_OVERFLOW_FLAG( )      ( BF_GET( TxCCTL0, 0, 1 ) != 0 )
+  #define BSP_TIMER_CLEAR_OVERFLOW_FLAG( )      /* the event is cleared automatically */
+  #define BSP_TIMER_MAN_CLEAR_OVERFLOW_FLAG( )  ( BF_SET( TxCCTL0, 0, 0, 1 ) )
+  #define BSP_TIMER_GET_TIMER_COUNT_VALUE_LO( ) ( BF_GET( TxR, 8, 8 ) )
+  #define BSP_TIMER_GET_TIMER_COUNT_VALUE_HI( ) ( BF_GET( TxR, 0, 8 ) )
+  #define BSP_TIMER_GET_TIMER_COUNT( p )        ( p = TxR )
+  #define BSP_TIMER_SET_OVERFLOW_VALUE( val )   ( TxCCR0 = val )
+
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
+
 /* ------------------------------------------------------------------------------------------------
  *                                     Board Initialization
  * ------------------------------------------------------------------------------------------------

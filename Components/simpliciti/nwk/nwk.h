@@ -1,8 +1,8 @@
 /**************************************************************************************************
   Filename:       nwk.h
-  Revised:        $Date: 2008-12-01 11:58:33 -0800 (Mon, 01 Dec 2008) $
-  Revision:       $Revision: 18551 $
-  Author:         $Author: lfriedman $
+  Revised:        $Date: 2011-10-26 15:44:58 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28059 $
+  Author:         $Author: jnoxon $
 
   Description:    This header file supports the SimpliciTI network layer.
 
@@ -39,11 +39,12 @@
 
 /* well known ports*/
 #define SMPL_PORT_PING          0x01
-#define SMPL_PORT_LINK          0x02
+#define SMPL_PORT_LINK          0x02  
 #define SMPL_PORT_JOIN          0x03
 #define SMPL_PORT_SECURITY      0x04
 #define SMPL_PORT_FREQ          0x05
 #define SMPL_PORT_MGMT          0x06
+#define SMPL_PORT_PLL           0x07
 
 #define SMPL_PORT_NWK_BCAST     0x1F
 #define SMPL_PORT_USER_BCAST    0x3F

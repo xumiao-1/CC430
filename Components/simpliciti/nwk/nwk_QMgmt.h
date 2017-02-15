@@ -1,8 +1,8 @@
 /**************************************************************************************************
   Filename:       nwk_QMgmt.h
-  Revised:        $Date: 2009-01-17 15:14:16 -0800 (Sat, 17 Jan 2009) $
-  Revision:       $Revision: 18788 $
-  Author:         $Author: rlord $
+  Revised:        $Date: 2011-10-26 15:44:58 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28059 $
+  Author:         $Author: jnoxon $
 
   Description:    This header file supports the SimpliciTI input and output frame queues.
 
@@ -37,7 +37,7 @@
 #define NWK_QMGMT_H
 
 
-#define  INQ   1
+#define  INQ   1  
 #define  OUTQ  2
 
 #define  USAGE_NORMAL  1

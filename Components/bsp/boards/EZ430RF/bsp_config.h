@@ -81,34 +81,42 @@
 
 #if (BSP_CONFIG_CLOCK_MHZ_SELECT == 1)
 #define BSP_CONFIG_CLOCK_MHZ        1.0
+#define BSP_CONFIG_CLOCK_KHZ        1000
 #define BSP_CONFIG_MSP430_BCSCTL1   CALBC1_1MHZ   /* factory calibrated value from flash */
 #define BSP_CONFIG_MSP430_DCOCTL    CALDCO_1MHZ   /* factory calibrated value from flash */
 #elif (BSP_CONFIG_CLOCK_MHZ_SELECT == 2)
 #define BSP_CONFIG_CLOCK_MHZ        2.1
+#define BSP_CONFIG_CLOCK_KHZ        2100
 #define BSP_CONFIG_MSP430_BCSCTL1   9
 #define BSP_CONFIG_MSP430_DCOCTL    ((/* DCO = */ 1 )  << 5 )
 #elif (BSP_CONFIG_CLOCK_MHZ_SELECT == 4)
 #define BSP_CONFIG_CLOCK_MHZ        3.9
+#define BSP_CONFIG_CLOCK_KHZ        3900
 #define BSP_CONFIG_MSP430_BCSCTL1   10
 #define BSP_CONFIG_MSP430_DCOCTL    ((/* DCO = */ 5 )  << 5 )
 #elif (BSP_CONFIG_CLOCK_MHZ_SELECT == 6)
 #define BSP_CONFIG_CLOCK_MHZ        6.1
+#define BSP_CONFIG_CLOCK_KHZ        6100
 #define BSP_CONFIG_MSP430_BCSCTL1   12
 #define BSP_CONFIG_MSP430_DCOCTL    ((/* DCO = */ 4 )  << 5 )
 #elif (BSP_CONFIG_CLOCK_MHZ_SELECT == 8)
 #define BSP_CONFIG_CLOCK_MHZ        8.0
+#define BSP_CONFIG_CLOCK_KHZ        8000
 #define BSP_CONFIG_MSP430_BCSCTL1   CALBC1_8MHZ   /* factory calibrated value from flash */
 #define BSP_CONFIG_MSP430_DCOCTL    CALDCO_8MHZ   /* factory calibrated value from flash */
 #elif (BSP_CONFIG_CLOCK_MHZ_SELECT == 10)
 #define BSP_CONFIG_CLOCK_MHZ        10.3
+#define BSP_CONFIG_CLOCK_KHZ        10300
 #define BSP_CONFIG_MSP430_BCSCTL1   14
 #define BSP_CONFIG_MSP430_DCOCTL    ((/* DCO = */ 2 )  << 5 ) 
 #elif (BSP_CONFIG_CLOCK_MHZ_SELECT == 12)
 #define BSP_CONFIG_CLOCK_MHZ        12.0
+#define BSP_CONFIG_CLOCK_KHZ        12000
 #define BSP_CONFIG_MSP430_BCSCTL1   CALBC1_12MHZ  /* factory calibrated value from flash */
 #define BSP_CONFIG_MSP430_DCOCTL    CALDCO_12MHZ  /* factory calibrated value from flash */
 #elif (BSP_CONFIG_CLOCK_MHZ_SELECT == 16)
 #define BSP_CONFIG_CLOCK_MHZ        16.0
+#define BSP_CONFIG_CLOCK_KHZ        16000
 #define BSP_CONFIG_MSP430_BCSCTL1   CALBC1_16MHZ  /* factory calibrated value from flash */
 #define BSP_CONFIG_MSP430_DCOCTL    CALDCO_16MHZ  /* factory calibrated value from flash */
 #else

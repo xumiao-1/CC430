@@ -1,6 +1,6 @@
 /**************************************************************************************************
-  Revised:        $Date: 2009-11-23 07:50:43 -0800 (Mon, 23 Nov 2009) $
-  Revision:       $Revision: 21225 $
+  Revised:        $Date: 2011-09-29 10:13:10 -0700 (Thu, 29 Sep 2011) $
+  Revision:       $Revision: 27756 $
 
   Copyright 2008-2009 Texas Instruments Incorporated.  All rights reserved.
 
@@ -72,6 +72,14 @@
  * ------------------------------------------------------------------------------------------------
  */
 
+/* ------------------------------------------------------------------------------------------------
+ *                                       Local Variables
+ * ------------------------------------------------------------------------------------------------
+ */
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+bool sActiveSPI = false;
+#endif
 
 /**************************************************************************************************
  * @fn          mrfiRadioInterfaceInit
@@ -93,6 +101,10 @@ void mrfiRadioInterfaceInit(void)
    * failures.
    */
   // RF1AIFCTL1 |= RFERRIE;
+  
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = false; // initialize interface status
+#endif
 }
 
 
@@ -112,6 +124,10 @@ uint8_t mrfiRadioInterfaceCmdStrobe(uint8_t addr)
   uint8_t statusByte, gdoState;
   mrfiRIFIState_t s;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
+
   /* Check for invalid address.
    * 0xBD is for SNOP with MSP set to read the bytes available in RX FIFO.
    */
@@ -119,6 +135,10 @@ uint8_t mrfiRadioInterfaceCmdStrobe(uint8_t addr)
 
   /* Lock out access to Radio IF */
   MRFI_RIF_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   /* Clear the Status read flag */
   MRFI_RADIO_STATUS_READ_CLEAR();
@@ -165,6 +185,10 @@ uint8_t mrfiRadioInterfaceCmdStrobe(uint8_t addr)
   /* Read status byte */
   statusByte = RF1ASTAT0B;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
+
   /* Allow access to Radio IF */
   MRFI_RIF_EXIT_CRITICAL_SECTION(s);
 
@@ -188,11 +212,19 @@ uint8_t mrfiRadioInterfaceReadReg(uint8_t addr)
   mrfiRIFIState_t s;
   uint8_t regValue;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
+
   /* Check for valid range. 0x3E is for PATABLE access */
   MRFI_RIF_ASSERT( (addr <= 0x3B) || (addr == 0x3E) );
 
   /* Lock out access to Radio IF */
   MRFI_RIF_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   /* Wait for radio to be ready for next instruction */
   MRFI_RADIO_INST_WRITE_WAIT();
@@ -210,6 +242,10 @@ uint8_t mrfiRadioInterfaceReadReg(uint8_t addr)
 
   /* Read out the register value */
   regValue   = RF1ADOUT1B; //auto read
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
 
   /* Allow access to Radio IF */
   MRFI_RIF_EXIT_CRITICAL_SECTION(s);
@@ -233,11 +269,19 @@ void mrfiRadioInterfaceWriteReg(uint8_t addr, uint8_t value)
 {
   mrfiRIFIState_t s;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
+
   /* Check for valid range. 0x3E is for PATABLE access */
   MRFI_RIF_ASSERT((addr <= 0x2E) || (addr == 0x3E));
 
   /* Lock out access to Radio IF */
   MRFI_RIF_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   /* Wait for radio to be ready for next instruction */
   MRFI_RADIO_INST_WRITE_WAIT();
@@ -250,6 +294,10 @@ void mrfiRadioInterfaceWriteReg(uint8_t addr, uint8_t value)
 
   /* Write the register value */
   RF1ADINB   = value; /* value to be written to the radio register */
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
 
   /* Allow access to Radio IF */
   MRFI_RIF_EXIT_CRITICAL_SECTION(s);
@@ -271,10 +319,18 @@ void mrfiRadioInterfaceWriteTxFifo(uint8_t * pData, uint8_t len)
 {
   mrfiRIFIState_t s;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
+
   MRFI_RIF_ASSERT(len != 0); /* zero length is not allowed */
 
   /* Lock out access to Radio IF */
   MRFI_RIF_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   /* Wait for radio to be ready for next instruction */
   MRFI_RADIO_INST_WRITE_WAIT();
@@ -294,6 +350,10 @@ void mrfiRadioInterfaceWriteTxFifo(uint8_t * pData, uint8_t len)
     len--;
 
   }while(len);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
 
   /* Allow access to Radio IF */
   MRFI_RIF_EXIT_CRITICAL_SECTION(s);
@@ -316,10 +376,18 @@ void mrfiRadioInterfaceReadRxFifo(uint8_t * pData, uint8_t len)
 {
   mrfiRIFIState_t s;
 
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  bool comm_state = sActiveSPI; // save comm state
+#endif
+
   MRFI_RIF_ASSERT(len != 0); /* zero length is not allowed */
 
   /* Lock out access to Radio IF */
   MRFI_RIF_ENTER_CRITICAL_SECTION(s);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = true;            // indicate active comm state
+#endif
 
   if(method == 1)
   {
@@ -364,6 +432,10 @@ void mrfiRadioInterfaceReadRxFifo(uint8_t * pData, uint8_t len)
 
     }while(len);
   }
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  sActiveSPI = comm_state; // restore comm state
+#endif
 
   /* Allow access to Radio IF */
   MRFI_RIF_EXIT_CRITICAL_SECTION(s);

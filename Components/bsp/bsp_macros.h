@@ -73,6 +73,74 @@
  */
 #define st(x)      do { x } while (__LINE__ == -1)
 
+#define REVERSE_16( v )\
+  st( uint8_t t = *((uint8_t*)&(v));\
+      *((uint8_t*)&(v)) = *(((uint8_t*)&(v)) + 1);\
+      *(((uint8_t*)&(v)) + 1) = t; )
+
+#define REVERSE_32( v )\
+  st( uint8_t t = *((uint8_t*)&(v));\
+      *((uint8_t*)&(v)) = *(((uint8_t*)&(v)) + 3);\
+      *(((uint8_t*)&(v)) + 3) = t;\
+      t = *(((uint8_t*)&(v)) + 1);\
+      *(((uint8_t*)&(v) + 1)) = *(((uint8_t*)&(v)) + 2);\
+      *(((uint8_t*)&(v)) + 2) = t; )
+
+
+/* bit field operations */
+/* In the following macros,
+ * reg  is a register variable suitable for access or assignment
+ * val  is the value to put into a bit field
+ * ofst is the offset of the lsb of the bit field in bits
+ * sz   is the size of the bit field in bits
+ */
+
+// BF_MSK0 generates a bit field mask assuming the offset is zero
+#ifndef BF_MSK0
+#define BF_MSK0(sz) (~(~0ul << (sz)))
+#endif
+
+// BF_MSK generates a bit field mask which can be used to isolate
+// a bit field
+#ifndef BF_MSK
+#define BF_MSK(ofst, sz) (BF_MSK0(sz) << (ofst))
+#endif
+
+// BF_CLR generates a complimented bit field mask which can be
+// used to clear a bit field before oring in its value
+#ifndef BF_CLR
+#define BF_CLR(ofst, sz) (~BF_MSK(ofst, sz))
+#endif
+
+// BF_GEN generates a bit field value appropriate for oring with
+// other bit field values for the same register.
+#ifndef BF_GEN
+#define BF_GEN(val, ofst, sz) (((val) & BF_MSK0(sz)) << (ofst))
+#endif
+
+// BF_GET extracts a bit field value from the given register value
+#ifndef BF_GET
+#define BF_GET(reg, ofst, sz) (((reg) >> (ofst)) & BF_MSK0(sz))
+#endif
+
+// BF_SET assigns a given bit field value to the bit field in
+// the register reference provided
+#ifndef BF_SET
+#define BF_SET(reg, val, ofst, sz ) (reg = (reg) & BF_CLR(ofst, sz)\
+                                          | BF_GEN(val, ofst, sz))
+#endif
+
+/*******************************************************************************
+ * min and max function like macros
+ ******************************************************************************/
+#ifndef min
+#define min(a, b) (( (a) < (b) ) ? (a) : (b) )
+#endif
+#ifndef max
+#define max(a, b) (( (a) < (b) ) ? (b) : (a) )
+#endif
+
+
 
 /**************************************************************************************************
  */

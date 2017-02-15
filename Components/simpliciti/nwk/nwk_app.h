@@ -1,9 +1,9 @@
 
 /**************************************************************************************************
   Filename:       nwk_app.h
-  Revised:        $Date: 2007-07-10 11:21:35 -0700 (Tue, 10 Jul 2007) $
-  Revision:       $Revision: 14865 $
-  Author:         $Author: lfriedman $
+  Revised:        $Date: 2011-10-26 15:44:58 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28059 $
+  Author:         $Author: jnoxon $
 
   Description:    This header file is for convenience and includes the headers for all the
                   network applications.
@@ -41,6 +41,7 @@
 #ifndef NWK_APP_H
 #define NWK_APP_H
 
+#include "nwk_pll.h"  
 #include "nwk_freq.h"
 #include "nwk_ping.h"
 #include "nwk_link.h"

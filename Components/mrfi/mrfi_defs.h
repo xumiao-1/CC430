@@ -109,7 +109,7 @@
 
 #define __mrfi_LENGTH_FIELD_SIZE__      1
 #define __mrfi_ADDR_SIZE__              4
-#define __mrfi_MAX_PAYLOAD_SIZE__       20
+#define __mrfi_MAX_PAYLOAD_SIZE__       34
 
 #define __mrfi_RX_METRICS_SIZE__        2
 #define __mrfi_RX_METRICS_RSSI_OFS__    0
@@ -117,7 +117,11 @@
 #define __mrfi_RX_METRICS_CRC_OK_MASK__ 0x80
 #define __mrfi_RX_METRICS_LQI_MASK__    0x7F
 
+#ifndef FREQUENCY_HOPPING
 #define __mrfi_NUM_LOGICAL_CHANS__      4
+#else
+#define __mrfi_NUM_LOGICAL_CHANS__      25
+#endif
 #define __mrfi_NUM_POWER_SETTINGS__     3
 
 #define __mrfi_BACKOFF_PERIOD_USECS__   250
@@ -146,7 +150,7 @@
 #define __mrfi_FCF_SIZE__               2
 #define __mrfi_DSN_SIZE__               1
 #define __mrfi_ADDR_SIZE__              4
-#define __mrfi_MAX_PAYLOAD_SIZE__       20
+#define __mrfi_MAX_PAYLOAD_SIZE__       34
 
 #define __mrfi_RX_METRICS_SIZE__        2
 #define __mrfi_RX_METRICS_RSSI_OFS__    0
@@ -154,7 +158,11 @@
 #define __mrfi_RX_METRICS_CRC_OK_MASK__ 0x80
 #define __mrfi_RX_METRICS_LQI_MASK__    0x7F
 
+#ifndef FREQUENCY_HOPPING
 #define __mrfi_NUM_LOGICAL_CHANS__      4
+#else
+#define __mrfi_NUM_LOGICAL_CHANS__      25
+#endif
 #define __mrfi_NUM_POWER_SETTINGS__     3
 
 #define __mrfi_BACKOFF_PERIOD_USECS__   250
@@ -220,6 +228,9 @@
 #error "ERROR: A radio family has not been assigned."
 #endif
 
+#if defined FREQUENCY_AGILITY && defined FREQUENCY_HOPPING
+#error "ERROR:  The macros FREQUENCY_AGILITY and FREQUENCY_HOPPING are mutually exclusive, only one may be defined."
+#endif
 
 /**************************************************************************************************
  */

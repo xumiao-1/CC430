@@ -1,8 +1,8 @@
 /**************************************************************************************************
   Filename:       nwk_frame.c
-  Revised:        $Date: 2009-03-10 16:21:40 -0700 (Tue, 10 Mar 2009) $
-  Revision:       $Revision: 19368 $
-  Author          $Author: lfriedman $
+  Revised:        $Date: 2011-10-26 15:37:41 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28058 $
+  Author          $Author: jnoxon $
 
   Description:    This file supports the SimpliciTI frame handling functions.
 
@@ -74,6 +74,10 @@ static  fhStatus_t (* const func[])(mrfiPacket_t *) = { nwk_processPing,
                                                         nwk_processSecurity,
                                                         nwk_processFreq,
                                                         nwk_processMgmt
+#ifdef NWK_PLL
+                                                          ,
+                                                        nwk_processPLL
+#endif
                                                       };
 #endif  /* SIZE_INFRAME_Q > 0 */
 
@@ -362,7 +366,9 @@ smplStatus_t nwk_retrieveFrame(rcvContext_t *rcv, uint8_t *msg, uint8_t *len, ad
           }
           else
           {
-            /* Frame bogus. Check for another frame. */
+            /* Frame bogus. Remove from queue and check for another frame. */
+            nwk_QadjustOrder(INQ, fPtr->orderStamp);
+            fPtr->fi_usage = FI_AVAILABLE;
             done = 0;
             continue;
           }
@@ -808,12 +814,16 @@ void nwk_replayFrame(frameInfo_t *pFrameInfo)
  *
  * input parameters
  * @param   frame   - pointer to frame in question
+ * @param   osPort  - offset of where requested port is in the application payload.
  *
  * output parameters
+ * @param   qType   - queue type in which frame found. Needed to know which queue
+ *                    requires order-adjusting when frame removed from queue. Defined
+ *                    only if a frame is found.
  *
  * @return      pointer to frame if there is one, otherwise 0.
  */
-frameInfo_t *nwk_getSandFFrame(mrfiPacket_t *frame, uint8_t osPort)
+frameInfo_t *nwk_getSandFFrame(mrfiPacket_t *frame, uint8_t osPort, uint8_t *qType)
 {
   uint8_t        i, port = *(MRFI_P_PAYLOAD(frame)+F_APP_PAYLOAD_OS+osPort);
   frameInfo_t *fiPtr;
@@ -824,6 +834,7 @@ frameInfo_t *nwk_getSandFFrame(mrfiPacket_t *frame, uint8_t osPort)
   /* check the input queue for messages sent by others. */
   if (fiPtr=nwk_QfindOldest(INQ, &rcv, USAGE_FWD))
   {
+    *qType = INQ;
     return fiPtr;
   }
 
@@ -840,6 +851,7 @@ frameInfo_t *nwk_getSandFFrame(mrfiPacket_t *frame, uint8_t osPort)
       {
         if (GET_FROM_FRAME(MRFI_P_PAYLOAD(&fiPtr->mrfiPkt), F_PORT_OS) == port)
         {
+          *qType = OUTQ;
           return fiPtr;
         }
       }

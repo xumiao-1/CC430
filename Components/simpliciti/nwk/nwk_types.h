@@ -1,14 +1,14 @@
 /**************************************************************************************************
   Filename:       nwk_types.h
-  Revised:        $Date: 2009-01-13 11:31:14 -0800 (Tue, 13 Jan 2009) $
-  Revision:       $Revision: 18744 $
-  Author:         $Author: lfriedman $
+  Revised:        $Date: 2011-10-26 15:44:58 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28059 $
+  Author:         $Author: jnoxon $
 
   Description:    This header file defines the SimpliciTI typedefs.
 
   Copyright 2004-2007 Texas Instruments Incorporated. All rights reserved.
 
-  IMPORTANT: Your use of this Software is limited to those specific rights granted under
+  IMPORTANT: Your use of this Software is limited to those specific rights granted under  
   the terms of a software license agreement between the user who downloaded the software,
   his/her employer (which must be your employer) and Texas Instruments Incorporated (the
   "License"). You may not use this Software unless you agree to abide by the terms of the
@@ -36,7 +36,7 @@
 #ifndef NWK_TYPES_H
 #define NWK_TYPES_H
 
-#define NWK_TX_RETRY_COUNT    10
+#define NWK_TX_RETRY_COUNT    10  
 #define NWK_RX_RETRY_COUNT    10
 
 #define NWK_APP_REPLY_BIT  (0x80)
@@ -73,7 +73,8 @@ enum ioctlObject  {
   IOCTL_OBJ_FWVER,
   IOCTL_OBJ_PROTOVER,
   IOCTL_OBJ_NVOBJ,
-  IOCTL_OBJ_TOKEN
+  IOCTL_OBJ_TOKEN,
+  IOCTL_OBJ_PLL
 };
 
 enum ioctlAction  {

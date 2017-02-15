@@ -1,8 +1,8 @@
 /**************************************************************************************************
   Filename:       nwk_QMgmt.c
-  Revised:        $Date: 2009-03-10 17:01:56 -0700 (Tue, 10 Mar 2009) $
-  Revision:       $Revision: 19372 $
-  Author:         $Author: lfriedman $
+  Revised:        $Date: 2011-10-26 15:44:58 -0700 (Wed, 26 Oct 2011) $
+  Revision:       $Revision: 28059 $
+  Author:         $Author: jnoxon $
 
   Description:    This file supports the SimpliciTI input and output frame queues
 
@@ -39,13 +39,17 @@
  */
 #include <intrinsics.h>
 #include <string.h>
-#include "bsp.h"
+#include "bsp.h"  
 #include "mrfi.h"
 #include "nwk_types.h"
 #include "nwk.h"
 #include "nwk_frame.h"
 #include "nwk_QMgmt.h"
 #include "nwk_mgmt.h"     /* need offsets for poll frames */
+#ifdef DEBUG_CRITICAL_SECTIONS
+  #include "bsp_leds.h"
+#endif
+
 
 /******************************************************************************
  * MACROS
@@ -272,7 +276,7 @@ frameInfo_t *nwk_QfindOldest(uint8_t which, rcvContext_t *rcv, uint8_t fi_usage)
   bspIState_t  intState;
   frameInfo_t *fPtr = 0, *wPtr;
   connInfo_t  *pCInfo = 0;
-  uint8_t     *pAddr1, *pAddr2, *pAddr3 = 0;
+  uint8_t     *pAddr1 = 0, *pAddr2 = 0, *pAddr3 = 0;
 
   if (INQ == which)
   {

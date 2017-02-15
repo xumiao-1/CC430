@@ -48,6 +48,9 @@
 #include "nwk_link.h"
 #include "nwk_globals.h"
 #include "nwk_security.h"
+#ifdef DEBUG_CRITICAL_SECTIONS
+  #include "bsp_leds.h"
+#endif
 
 /******************************************************************************
  * MACROS
@@ -331,6 +334,7 @@ smplStatus_t nwk_link(linkID_t *lid)
 
     if (SMPL_SUCCESS != (rc=SMPL_Ioctl(IOCTL_OBJ_RAW_IO, IOCTL_ACT_WRITE, &ioctl_info.send)))
     {
+      nwk_freeConnection(pCInfo);
       return rc;
     }
 

@@ -147,8 +147,11 @@ uint8_t mrfiSpiCmdStrobe(uint8_t addr);
 uint8_t mrfiSpiReadReg(uint8_t addr);
 void mrfiSpiWriteReg(uint8_t addr, uint8_t value);
 
-void mrfiSpiWriteTxFifo(uint8_t * pWriteData, uint8_t len);
-void mrfiSpiReadRxFifo(uint8_t * pReadData, uint8_t len);
+bool mrfiSpiWriteTxFifo(uint8_t * pWriteData, uint8_t len);
+bool mrfiSpiReadRxFifo(uint8_t * pReadData, uint8_t len);
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+extern bool sActiveSPI;
+#endif
 
 
 /**************************************************************************************************

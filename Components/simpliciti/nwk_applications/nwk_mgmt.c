@@ -218,7 +218,7 @@ static void send_poll_reply(mrfiPacket_t *frame)
   uint8_t         msgtid = *(MRFI_P_PAYLOAD(frame)+F_APP_PAYLOAD_OS+MB_TID_OS);
   frameInfo_t    *pOutFrame;
   sfClientInfo_t *pClientInfo;
-  uint8_t         loc;
+  uint8_t         loc, qType;
 
   /* Make sure this guy is really a client. We can tell from the source address. */
   if (!(pClientInfo=nwk_isSandFClient(MRFI_P_SRC_ADDR(frame), &loc)))
@@ -253,14 +253,14 @@ static void send_poll_reply(mrfiPacket_t *frame)
     return;
   }
 
-  if (pOutFrame = nwk_getSandFFrame(frame, M_POLL_PORT_OS))
+  if (pOutFrame = nwk_getSandFFrame(frame, M_POLL_PORT_OS, &qType))
   {
     /* We need to adjust the order in the queue in this case. Currently
      * we know it is in the input queue and that this adjustment is safe
      * because we're in an ISR thread. This is a fragile fix, though, and
      * should be revisited when time permits.
      */
-    nwk_QadjustOrder(INQ, pOutFrame->orderStamp);
+    nwk_QadjustOrder(qType, pOutFrame->orderStamp);
 
     /* reset hop count... */
     PUT_INTO_FRAME(MRFI_P_PAYLOAD(&pOutFrame->mrfiPkt), F_HOP_COUNT, MAX_HOPS_FROM_AP);

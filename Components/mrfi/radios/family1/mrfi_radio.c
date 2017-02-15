@@ -48,7 +48,8 @@
 #include "mrfi_defs.h"
 #include "mrfi_spi.h"
 #include "../common/mrfi_f1f2.h"
-
+#include "nwk_pll.h"
+#include "bsp_leds.h" // debug only
 
 /* ------------------------------------------------------------------------------------------------
  *                                          Defines
@@ -86,20 +87,9 @@
   #error "ERROR: RSSI offset value not defined for this radio"
 #endif
 
-
-#define MRFI_LENGTH_FIELD_OFS               __mrfi_LENGTH_FIELD_OFS__
-#define MRFI_LENGTH_FIELD_SIZE              __mrfi_LENGTH_FIELD_SIZE__
-#define MRFI_HEADER_SIZE                    __mrfi_HEADER_SIZE__
-#define MRFI_FRAME_BODY_OFS                 __mrfi_DST_ADDR_OFS__
-#define MRFI_BACKOFF_PERIOD_USECS           __mrfi_BACKOFF_PERIOD_USECS__
-
 #define MRFI_RANDOM_OFFSET                   67
 #define MRFI_RANDOM_MULTIPLIER              109
 #define MRFI_MIN_SMPL_FRAME_SIZE            (MRFI_HEADER_SIZE + NWK_HDR_SIZE)
-
-/* rx metrics definitions, known as appended "packet status bytes" in datasheet parlance */
-#define MRFI_RX_METRICS_CRC_OK_MASK         __mrfi_RX_METRICS_CRC_OK_MASK__
-#define MRFI_RX_METRICS_LQI_MASK            __mrfi_RX_METRICS_LQI_MASK__
 
 /* GDO functionality */
 #define MRFI_GDO_SYNC           6
@@ -161,16 +151,36 @@
 /* FIFO threshold - this register has fields that need to be configured for the CC1101 */
 #define MRFI_SETTING_FIFOTHR    (0x07 | (SMARTRF_SETTING_FIFOTHR & (BV(4)|BV(5)|BV(6))))
 
-/* Max time we can be in a critical section within the delay function.
- * This could be fine-tuned by observing the overhead is calling the bsp delay
- * function. The overhead should be very small compared to this value.
- * Note that the max value for this must be less than 19 usec with the
- * default CLKCON.TICKSPD and CLKCON.CLOCKSPD settings and external 26 MHz
- * crystal as a clock source (which we use).
- *
- * Be careful of direct calls to Mrfi_DelayUsec().
+/*
+ * Maximum tramsmit time is calculated from the data rate times the maximum
+ * number of bits that can be transmitted.  The data rate is calculated from
+ * the DRATE_M and DRATE_E fields of the MDMCFG3 and MDMCFG4 registers
+ * respectively.
  */
-#define MRFI_MAX_DELAY_US 16 /* usec */
+#ifndef MRFI_XTAL_FREQ_Hz
+#define MRFI_XTAL_FREQ_Hz 26000000L
+#endif
+#define MRFI_SYNC_WORD_SIZE ( ( (SMARTRF_SETTING_MDMCFG2 & 0x3) == 0 ) ? 0 : \
+                            ( ( (SMARTRF_SETTING_MDMCFG2 & 0x3) != 3 ) ? 2 : 4 ) )
+#define MRFI_PREAMBLE_SIZE ( ( ( SMARTRF_SETTING_MDMCFG1 & 0x70 ) == 0x00 ) ?  2 : \
+                           ( ( ( SMARTRF_SETTING_MDMCFG1 & 0x70 ) == 0x10 ) ?  3 : \
+                           ( ( ( SMARTRF_SETTING_MDMCFG1 & 0x70 ) == 0x20 ) ?  4 : \
+                           ( ( ( SMARTRF_SETTING_MDMCFG1 & 0x70 ) == 0x30 ) ?  6 : \
+                           ( ( ( SMARTRF_SETTING_MDMCFG1 & 0x70 ) == 0x40 ) ?  8 : \
+                           ( ( ( SMARTRF_SETTING_MDMCFG1 & 0x70 ) == 0x50 ) ? 12 : \
+                           ( ( ( SMARTRF_SETTING_MDMCFG1 & 0x70 ) == 0x60 ) ? 16 : \
+                                                                              24 ) ) ) ) ) ) )
+#define MRFI_MAX_TRANSMIT_BYTES ( MRFI_MAX_FRAME_SIZE + MRFI_SYNC_WORD_SIZE + MRFI_PREAMBLE_SIZE )
+#define MRFI_TRANSMIT_BIT_PERIOD_us (1000000.0*(1L<<28)/((SMARTRF_SETTING_MDMCFG3+256.0)*MRFI_XTAL_FREQ_Hz*(1L<<(SMARTRF_SETTING_MDMCFG4 & 0xF))))
+#define MRFI_MAX_TRANSMIT_TIME_us ((long)( MRFI_TRANSMIT_BIT_PERIOD_us * 8 * MRFI_MAX_TRANSMIT_BYTES + 500 ))
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+
+// re-map static functions promoted to public for backwards compatibility
+#define Mrfi_DelayUsec( a ) MRFI_DelayUsec( a )
+#define Mrfi_DelayMs( a ) MRFI_DelayMs( a )
+
+#endif // !MRFI_TIMER_ALWAYS_ACTIVE
 
 #define MRFI_PKTSTATUS_CCA BV(4)
 #define MRFI_PKTSTATUS_CS  BV(6)
@@ -191,8 +201,10 @@
  * ------------------------------------------------------------------------------------------------
  */
 #define MRFI_SYNC_PIN_IS_HIGH()                     MRFI_GDO0_PIN_IS_HIGH()
-#define MRFI_ENABLE_SYNC_PIN_INT()                  MRFI_ENABLE_GDO0_INT()
-#define MRFI_DISABLE_SYNC_PIN_INT()                 MRFI_DISABLE_GDO0_INT()
+//#define MRFI_ENABLE_SYNC_PIN_INT()                  MRFI_ENABLE_GDO0_INT()
+#define MRFI_ENABLE_SYNC_PIN_INT()                  ( INFIX( P, __mrfi_GDO0_PORT__, IE )  |= ( ( rx_isr_context == true ) ? 0 : BV(__mrfi_GDO0_BIT__) ) )
+//#define MRFI_DISABLE_SYNC_PIN_INT()                 MRFI_DISABLE_GDO0_INT()
+#define MRFI_DISABLE_SYNC_PIN_INT()                 ( INFIX( P, __mrfi_GDO0_PORT__, IE )  &= ~( ( rx_isr_context == true ) ? 0 : BV(__mrfi_GDO0_BIT__) ) )
 #define MRFI_SYNC_PIN_INT_IS_ENABLED()              MRFI_GDO0_INT_IS_ENABLED()
 #define MRFI_CLEAR_SYNC_PIN_INT_FLAG()              MRFI_CLEAR_GDO0_INT_FLAG()
 #define MRFI_SYNC_PIN_INT_FLAG_IS_SET()             MRFI_GDO0_INT_FLAG_IS_SET()
@@ -206,6 +218,7 @@
 #define MRFI_CONFIG_GDO0_AS_PAPD_SIGNAL()           mrfiSpiWriteReg(IOCFG0, MRFI_GDO_PA_PD)
 #define MRFI_CONFIG_GDO0_AS_SYNC_SIGNAL()           mrfiSpiWriteReg(IOCFG0, MRFI_GDO_SYNC)
 
+#ifndef MRFI_TIMER_ALWAYS_ACTIVE
 
 /* There is no bit in h/w to tell if RSSI in the register is valid or not.
  * The hardware needs to be in RX state for a certain amount of time before
@@ -231,6 +244,8 @@
     delay -= 64;                                                              \
   }while(delay > 0);                                                          \
 }                                                                             \
+
+#endif // !MRFI_TIMER_ALWAYS_ACTIVE
 
 #define MRFI_STROBE_IDLE_AND_WAIT()                   \
 {                                                     \
@@ -289,12 +304,20 @@ static const uint8_t mrfiRadioCfg[][2] =
  */
 void MRFI_GpioIsr(void); /* this called from mrfi_board.c */
 static void Mrfi_SyncPinRxIsr(void);
-static void Mrfi_RxModeOn(void);
-static void Mrfi_RandomBackoffDelay(void);
-static void Mrfi_RxModeOff(void);
-static void Mrfi_DelayUsec(uint16_t howLong);
-static void Mrfi_DelayUsecSem(uint16_t howLong);
+static void MRFI_PrepareToTx( mrfiPacket_t * );
+static void MRFI_CompleteTxPrep( mrfiPacket_t * );
 static int8_t Mrfi_CalculateRssi(uint8_t rawValue);
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+//static void Mrfi_DelayUsecLong(uint32_t count, TimeoutTerminator_t term);
+static bool Mrfi_CheckSem( void );
+static bool Mrfi_ValidateRSSI( void );
+#else
+static void Mrfi_DelayUsec(uint16_t);
+static void Mrfi_DelayUsecSem(uint16_t howLong);
+#endif
+static bool mrfi_TxCCADone( void );
+static bool mrfi_TxImmediateDone( void );
 
 /* ------------------------------------------------------------------------------------------------
  *                                       Local Variables
@@ -310,6 +333,27 @@ static volatile uint8_t  sReplyDelayContext = 0;
 static          uint16_t sReplyDelayScalar = 0;
 static          uint16_t sBackoffHelper = 0;
 
+static bool rx_isr_context = false;
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  static bool stx_active = false;
+  static MRFI_ms_event_t sOne_ms_event_hook = NULL;
+  static int32_t sTmrRateOffset = 0;
+  #if BSP_TIMER_SIZE == 8
+    static volatile uint8_t sTimerCntHi;
+  #endif
+  #ifdef NWK_PLL
+    static mrfi_Time_t* sTxTimeStampAddr = NULL;
+    static mrfi_Time_t* sRxTimeStampAddr = NULL;
+  #endif
+#endif
+
+  FHSS_ACTIVE( uint16_t sHopCount = 0 );
+  FHSS_ACTIVE( uint8_t sLogicalChannel = 0 );
+  FHSS_ACTIVE( uint8_t sHopNowSem = 0 );
+  FHSS_ACTIVE( uint16_t sHopRate = MRFI_HOP_TIME_ms - 1 );
+  FHSS_ACTIVE( bool sTxValid = false );
+
 /**************************************************************************************************
  * @fn          MRFI_Init
  *
@@ -322,12 +366,28 @@ static          uint16_t sBackoffHelper = 0;
  */
 void MRFI_Init(void)
 {
+
   /* ------------------------------------------------------------------
    *    Initialization
    *   -----------------
    */
 
   memset(&mrfiIncomingPacket, 0x0, sizeof(mrfiIncomingPacket));
+
+  /* ------------------------------------------------------------------
+   *    Configure timer
+   *   ----------------------
+   */
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  stx_active = false;
+  /* initialize the timer for operation if pll is enabled */
+  Mrfi_TimerInit( );
+  sOne_ms_event_hook = NULL;
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
+  FHSS_ACTIVE( sHopCount = 0 );
+  FHSS_ACTIVE( sLogicalChannel = MRFI_RandomByte( ) % MRFI_NUM_LOGICAL_CHANS );
+  FHSS_ACTIVE( sHopNowSem = 0 );
+  FHSS_ACTIVE( sHopRate = MRFI_HOP_TIME_ms - 1 );
 
   /* initialize GPIO pins */
   MRFI_CONFIG_GDO0_PIN_AS_INPUT();
@@ -411,7 +471,11 @@ void MRFI_Init(void)
   mrfiSpiCmdStrobe( SRX );
 
   /* delay for the rssi to be valid */
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  MRFI_WaitTimeoutUsec(MRFI_RSSI_VALID_DELAY_US, Mrfi_ValidateRSSI);
+#else // MRFI_TIMER_ALWAYS_ACTIVE
   MRFI_RSSI_VALID_WAIT();
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
 
   /* use most random bit of rssi to populate the random seed */
   {
@@ -515,11 +579,112 @@ void MRFI_Init(void)
 
 
 /**************************************************************************************************
+ * @fn          MRFI_PrepareToTx
+ *
+ * @brief       Setup fifo and other variables for transmit
+ *
+ * @param       pPacket - pointer to packet to transmit
+ *
+ * @return      None
+ **************************************************************************************************
+ */
+static void MRFI_PrepareToTx( mrfiPacket_t * pPacket )
+{
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  stx_active = true; // indicate we are in the act of transmitting
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
+
+   mrfiSpiCmdStrobe( SFTX ); // flush the tx fifo
+
+#ifndef NWK_PLL
+  {
+    /* compute number of bytes to write to transmit FIFO */
+    uint8_t txBufLen = pPacket->frame[MRFI_LENGTH_FIELD_OFS]
+                                                   + MRFI_LENGTH_FIELD_SIZE;
+    mrfiSpiWriteTxFifo(pPacket->frame, txBufLen);
+  }
+#else // defined NWK_PLL
+  mrfiSpiWriteTxFifo(pPacket->frame, MRFI_PAYLOAD_OFFSET);
+#endif
+  return;
+}
+
+
+/**************************************************************************************************
+ * @fn          MRFI_CompleteTxPrep
+ *
+ * @brief       Finalize setup for transmit
+ *
+ * @param       pPacket - pointer to packet to transmit
+ *
+ * @return      None
+ **************************************************************************************************
+ */
+static void MRFI_CompleteTxPrep( mrfiPacket_t * pPacket )
+{
+#ifdef NWK_PLL
+  /* compute number of bytes to write to transmit FIFO */
+  uint8_t txBufLen = pPacket->frame[MRFI_LENGTH_FIELD_OFS]
+                             + MRFI_LENGTH_FIELD_SIZE - MRFI_PAYLOAD_OFFSET;
+
+  /* ------------------------------------------------------------------
+   *    Write packet to transmit FIFO
+   *   --------------------------------
+   */
+
+  /* if sTxTimeStampAddr is not null then the network application has
+   * filled it in because it is a PLL packet that requires the transmit
+   * time.  After filling in the time stamp at the address specified,
+   * delete the reference so future packets will not have a time stamp
+   * acquisition.
+   */
+  if( sTxTimeStampAddr != NULL ) // if need to add time stamp to packet
+    MRFI_GetLocalRawTime(sTxTimeStampAddr); // fill in the packet data
+
+  mrfiSpiWriteTxFifo(pPacket->frame + MRFI_PAYLOAD_OFFSET, txBufLen);
+#else // defined NWK_PLL
+  (void) pPacket;
+#endif
+}
+
+
+/**************************************************************************************************
+ * @fn          mrfi_TxCCADone
+ *
+ * @brief       Indicates status of transmission completion
+ *
+ * @param       None
+ *
+ * @return      true if transmission is complete, false otherwise
+ **************************************************************************************************
+ */
+bool mrfi_TxCCADone( void )
+{
+  return MRFI_PAPD_PIN_IS_HIGH(); // || marc_state == RF_SM_RX || marc_state == RF_SM_IDLE;
+}
+
+/**************************************************************************************************
+ * @fn          mrfi_TxImmediateDone
+ *
+ * @brief       Indicates status of transmission completion
+ *
+ * @param       None
+ *
+ * @return      true if transmission is complete, false otherwise
+ **************************************************************************************************
+ */
+bool mrfi_TxImmediateDone( void )
+{
+  return MRFI_SYNC_PIN_INT_FLAG_IS_SET(); // || marc_state == RF_SM_RX || marc_state == RF_SM_IDLE;
+}
+
+/**************************************************************************************************
  * @fn          MRFI_Transmit
  *
  * @brief       Transmit a packet using CCA algorithm.
  *
  * @param       pPacket - pointer to packet to transmit
+ *              txType  - FORCED or CCA
  *
  * @return      Return code indicates success or failure of transmit:
  *                  MRFI_TX_RESULT_SUCCESS - transmit succeeded
@@ -528,8 +693,10 @@ void MRFI_Init(void)
  */
 uint8_t MRFI_Transmit(mrfiPacket_t * pPacket, uint8_t txType)
 {
+#ifdef NWK_PLL
+    bspIState_t s;
+#endif
   uint8_t ccaRetries;
-  uint8_t txBufLen;
   uint8_t returnValue = MRFI_TX_RESULT_SUCCESS;
 
   /* radio must be awake to transmit */
@@ -538,14 +705,7 @@ uint8_t MRFI_Transmit(mrfiPacket_t * pPacket, uint8_t txType)
   /* Turn off reciever. We can ignore/drop incoming packets during transmit. */
   Mrfi_RxModeOff();
 
-  /* compute number of bytes to write to transmit FIFO */
-  txBufLen = pPacket->frame[MRFI_LENGTH_FIELD_OFS] + MRFI_LENGTH_FIELD_SIZE;
-
-  /* ------------------------------------------------------------------
-   *    Write packet to transmit FIFO
-   *   --------------------------------
-   */
-  mrfiSpiWriteTxFifo(&(pPacket->frame[0]), txBufLen);
+  MRFI_PrepareToTx( pPacket );
 
 
   /* ------------------------------------------------------------------
@@ -554,11 +714,35 @@ uint8_t MRFI_Transmit(mrfiPacket_t * pPacket, uint8_t txType)
    */
   if (txType == MRFI_TX_TYPE_FORCED)
   {
+//#ifdef NWK_PLL
+//    BSP_ENTER_CRITICAL_SECTION(s);
+//#endif
+//    MRFI_CompleteTxPrep( pPacket );
+#ifdef NWK_PLL
+    do
+    {
+    BSP_ENTER_CRITICAL_SECTION(s);
+      if( stx_active == false ) // if the channel was changed
+      {
+        BSP_EXIT_CRITICAL_SECTION(s);
+        Mrfi_RxModeOff();            // turn off the radio
+        MRFI_PrepareToTx( pPacket ); // setup transmission again
+        continue; // restart the loop
+      }
+    MRFI_CompleteTxPrep( pPacket );
+    } while( 0 );
+#endif
+
     /* Issue the TX strobe. */
     mrfiSpiCmdStrobe( STX );
+#ifdef NWK_PLL
+    BSP_EXIT_CRITICAL_SECTION(s);
+#endif
 
     /* Wait for transmit to complete */
-    while(!MRFI_SYNC_PIN_INT_FLAG_IS_SET());
+    Mrfi_DelayUsecLong( MRFI_MAX_TRANSMIT_TIME_us / 1000,
+                        MRFI_MAX_TRANSMIT_TIME_us % 1000,
+                        mrfi_TxImmediateDone );
 
     /* Clear the interrupt flag */
     MRFI_CLEAR_SYNC_PIN_INT_FLAG();
@@ -600,7 +784,23 @@ uint8_t MRFI_Transmit(mrfiPacket_t * pPacket, uint8_t txType)
       mrfiSpiCmdStrobe( SRX );
 
       /* wait for the rssi to be valid. */
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+      MRFI_WaitTimeoutUsec(MRFI_RSSI_VALID_DELAY_US, Mrfi_ValidateRSSI);
+#else // MRFI_TIMER_ALWAYS_ACTIVE
       MRFI_RSSI_VALID_WAIT();
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
+#ifdef NWK_PLL
+        BSP_ENTER_CRITICAL_SECTION(s);
+        if( stx_active == false ) // if the channel was changed
+        {
+          BSP_EXIT_CRITICAL_SECTION(s);
+          Mrfi_RxModeOff();            // turn off the radio
+          MRFI_PrepareToTx( pPacket ); // setup transmission again
+          continue; // restart the cca loop
+        }
+
+      MRFI_CompleteTxPrep( pPacket );
+#endif
 
       /*
        *  Clear the PA_PD pin interrupt flag.  This flag, not the interrupt itself,
@@ -611,8 +811,12 @@ uint8_t MRFI_Transmit(mrfiPacket_t * pPacket, uint8_t txType)
        */
       MRFI_CLEAR_PAPD_PIN_INT_FLAG();
 
-      /* send strobe to initiate transmit */
+      /* Issue the TX strobe. */
       mrfiSpiCmdStrobe( STX );
+
+#ifdef NWK_PLL
+      BSP_EXIT_CRITICAL_SECTION(s);
+#endif
 
       /* Delay long enough for the PA_PD signal to indicate a
        * successful transmit. This is the 250 XOSC periods
@@ -637,11 +841,9 @@ uint8_t MRFI_Transmit(mrfiPacket_t * pPacket, uint8_t txType)
         /* Clear the PA_PD int flag */
         MRFI_CLEAR_PAPD_PIN_INT_FLAG();
 
-        /* PA_PD signal stays LOW while in TX state and goes back to HIGH when
-         * the radio transitions to RX state.
-         */
-        /* wait for transmit to complete */
-        while (!MRFI_PAPD_PIN_IS_HIGH());
+        Mrfi_DelayUsecLong( MRFI_MAX_TRANSMIT_TIME_us / 1000,
+                            MRFI_MAX_TRANSMIT_TIME_us % 1000,
+                            mrfi_TxCCADone );
 
         /* transmit done, break */
         break;
@@ -666,8 +868,13 @@ uint8_t MRFI_Transmit(mrfiPacket_t * pPacket, uint8_t txType)
         /* Retry ? */
         if (ccaRetries != 0)
         {
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+          stx_active = false;
+#endif
           /* delay for a random number of backoffs */
           Mrfi_RandomBackoffDelay();
+
+          MRFI_PrepareToTx( pPacket ); // setup transmission again
 
           /* decrement CCA retries before loop continues */
           ccaRetries--;
@@ -686,6 +893,11 @@ uint8_t MRFI_Transmit(mrfiPacket_t * pPacket, uint8_t txType)
 
   /* Radio is already in IDLE state */
 
+#ifdef NWK_PLL
+  stx_active = false;
+  // Packet transmitted, regardless of packet type, remove reference.
+  sTxTimeStampAddr = NULL;
+#endif
   /*
    * Flush the transmit FIFO.  It must be flushed so that
    * the next transmit can start with a clean slate.
@@ -741,7 +953,7 @@ void MRFI_Receive(mrfiPacket_t * pPacket)
  */
 static void Mrfi_SyncPinRxIsr(void)
 {
-  uint8_t frameLen;
+  uint8_t frameLen = 0x00;
   uint8_t rxBytes;
 
   /* We should receive this interrupt only in RX state
@@ -870,6 +1082,10 @@ static void Mrfi_SyncPinRxIsr(void)
       mrfiSpiReadRxFifo(&(mrfiIncomingPacket.rxMetrics[0]), MRFI_RX_METRICS_SIZE);
 
 
+      MRFI_DISABLE_SYNC_PIN_INT( ); // disable radio sync interrupt so no more occur
+      rx_isr_context = true;        // deactivate sync pin interrupt enable/disable macros
+      BSP_ENABLE_INTERRUPTS( );     // enable interrupts so higher priority irqs can occur
+
       /* ------------------------------------------------------------------
        *    CRC check
        *   ------------
@@ -921,6 +1137,9 @@ static void Mrfi_SyncPinRxIsr(void)
           }
         }
       }
+    BSP_DISABLE_INTERRUPTS( );    // disable interrupts so we can enable radio sync interrupt again
+    rx_isr_context = false;       // activate sync pin interrupt enable/disable macros
+    MRFI_ENABLE_SYNC_PIN_INT( );  // enable radio sync interrupt again
     }
   }
 
@@ -950,6 +1169,10 @@ static void Mrfi_RxModeOn(void)
 
   /* enable receive interrupts */
   MRFI_ENABLE_SYNC_PIN_INT();
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  stx_active = false; // indicate we're not in transmit
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
 }
 
 /**************************************************************************************************
@@ -999,6 +1222,10 @@ static void Mrfi_RxModeOff(void)
 
   /* clear receive interrupt */
   MRFI_CLEAR_SYNC_PIN_INT_FLAG();
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  stx_active = false; // indicate we're not in transmit
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
 }
 
 
@@ -1102,6 +1329,10 @@ void MRFI_WakeUp(void)
   /* enter idle mode */
   mrfiRadioState = MRFI_RADIO_STATE_IDLE;
   MRFI_STROBE_IDLE_AND_WAIT();
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  stx_active = false; // indicate we're not in transmit
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
 }
 
 
@@ -1121,6 +1352,16 @@ void MRFI_WakeUp(void)
  */
 void MRFI_GpioIsr(void)
 {
+#ifdef NWK_PLL
+  /*  If the network pll is running then we need to acquire
+   *  the receive time stamp (at least as close to the actual
+   *  time that the receive occurred)
+   */
+  if( sRxTimeStampAddr != NULL )
+    MRFI_GetLocalRawTime( sRxTimeStampAddr );
+
+#endif
+
   /* see if sync pin interrupt is enabled and has fired */
   if (MRFI_SYNC_PIN_INT_IS_ENABLED() && MRFI_SYNC_PIN_INT_FLAG_IS_SET())
   {
@@ -1134,6 +1375,7 @@ void MRFI_GpioIsr(void)
      *  naturally but it must be verified for every target.
      */
     MRFI_CLEAR_SYNC_PIN_INT_FLAG();
+
     Mrfi_SyncPinRxIsr();
   }
 }
@@ -1162,7 +1404,11 @@ int8_t MRFI_Rssi(void)
    * a certain duration. This duration depends on
    * the baud rate and the received signal strength itself.
    */
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+  MRFI_WaitTimeoutUsec(MRFI_RSSI_VALID_DELAY_US, Mrfi_ValidateRSSI);
+#else // MRFI_TIMER_ALWAYS_ACTIVE
   MRFI_RSSI_VALID_WAIT();
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
 
   /* Read the RSSI value */
   regValue = mrfiSpiReadReg( RSSI );
@@ -1247,9 +1493,632 @@ static void Mrfi_RandomBackoffDelay(void)
   /* delay for randomly computed number of backoff periods */
   for (i=0; i<backoffs; i++)
   {
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+    MRFI_DelayUsec( sBackoffHelper );
+#else
     Mrfi_DelayUsec( sBackoffHelper );
+#endif
   }
 }
+
+/**************************************************************************************************
+ * @fn          MRFI_FreqHoppingBckgndr
+ *
+ * @brief       This function needs to be called periodicaly to manage frequency hopping
+ *
+ * @param       none
+ *
+ * @return      nothing
+ **************************************************************************************************
+ */
+#ifdef FREQUENCY_HOPPING
+void MRFI_FreqHoppingBckgndr( void )
+{
+  if( stx_active == false && sHopNowSem != 0 )
+  {
+    sHopNowSem = 0; // clear the semaphore
+
+    // wait for the radio to not be busy
+    while( MRFI_PAPD_PIN_IS_HIGH() );
+
+    // change the channel
+    MRFI_SetLogicalChannel( sLogicalChannel );
+  }
+  return;
+}
+#endif // FREQUENCY_HOPPING
+
+#ifdef NWK_PLL
+/**************************************************************************************************
+ * @fn          MRFI_SetRxTimeStampAddr
+ *
+ * @brief       Sets the address at which receive time stamps should be written to.
+ *              this address must be statically constant as it is accessed from the
+ *              receive ISR.
+ *
+ * @param       t
+ *                The address at which a mrfi_Time_t object exists.
+ *
+ * @return      The previous address stored or NULL of no previous address stored.
+ **************************************************************************************************
+ */
+mrfi_Time_t* MRFI_SetRxTimeStampAddr( mrfi_Time_t* t )
+{
+  mrfi_Time_t* tmp = sRxTimeStampAddr; // save the previous address
+  sRxTimeStampAddr = t;                // assign the new address
+  return tmp;                          // return the old address
+}
+
+/**************************************************************************************************
+ * @fn          MRFI_SetTxTimeStampAddr
+ *
+ * @brief       Sets the address at which transmit time stamps should be written to.
+ *              Call this function just before calling a any function which transmits
+ *              a PLL packet requiring a transmit time stamp to be inserted.  This value
+ *              will be reset to NULL once the time stamp has been filled in.  Therefore,
+ *              this function must be called before each PLL packet is sent.
+ *
+ * @param       t
+ *                The address at which a mrfi_Time_t object exists.
+ *
+ * @return      none
+ **************************************************************************************************
+ */
+void MRFI_SetTxTimeStampAddr( mrfi_Time_t* t )
+{
+  sTxTimeStampAddr = t;                // assign the new address
+  return;
+}
+
+#endif
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+/**************************************************************************************************
+ * @fn          MRFI_AdjustTimerModulationRate
+ *
+ * @brief       Adjusts the timer modulation rate value which adjusts the average rate
+ *              at which the timer ISR is entered.
+ *
+ * @param       delta
+ *                Represents the change in value to modify the modulation rate by in
+ *                q8.24 format (signed)
+ *
+ * @return      nothing
+ **************************************************************************************************
+ */
+void MRFI_AdjustTimerModulationRate( int32_t delta )
+{
+  BSP_CRITICAL_STATEMENT( sTmrRateOffset = delta );
+}
+
+/**************************************************************************************************
+ * @fn          MRFI_Set_ms_Event
+ *
+ * @brief       Assigns the passed event hook function to the 1 millisecond event hook.
+ *                A NULL value can be used to indicate no hook function is to be called.
+ *              NOTE: This function is normally used by the NWK layer and the user should
+ *                    not generally call this function but instead call the similar
+ *                    NWK layer 1 ms hook installer NWK_Set_ms_Event.
+ *
+ * @param       evt_hook
+ *                evt_hook points to a function which will be called each time 1ms of
+ *                system time has elapsed.
+ *
+ * @return      the previous hook function pointer or NULL if none assigned.
+ **************************************************************************************************
+ */
+MRFI_ms_event_t MRFI_Set_ms_Event( MRFI_ms_event_t evt_hook )
+{
+  MRFI_ms_event_t tmp = sOne_ms_event_hook; // copy over the current event hook
+  BSP_CRITICAL_STATEMENT( sOne_ms_event_hook = evt_hook ); // assign the new event hook
+  return tmp;                               // return the previous event hook
+}
+
+/**************************************************************************************************
+ * @fn          MRFI_Get_ms_Event
+ *
+ * @brief       Returns the currently assigned 1 millisecond event hook function pointer.
+ *
+ * @param       none
+ *
+ * @return      the currently assigned hook function pointer or NULL if none assigned.
+ **************************************************************************************************
+ */
+MRFI_ms_event_t MRFI_Get_ms_Event( void )
+{
+  return sOne_ms_event_hook; // return the current hook function
+}
+
+/**************************************************************************************************
+ * @fn          Mrfi_ValidateRSSI
+ *
+ * @brief       Returns true if the RSSI indication is valid
+ * @param       none
+ *
+ * @return      true if RSSI indicates as valid
+ **************************************************************************************************
+ */
+static bool Mrfi_ValidateRSSI( void )
+{
+  return mrfiSpiReadReg(PKTSTATUS) & (MRFI_PKTSTATUS_CCA | MRFI_PKTSTATUS_CS);
+}
+
+/**************************************************************************************************
+ * @fn          MRFI_GetLocalRawTime
+ *
+ * @brief       Fills in the time structure passed in with the local time of this radio.
+ *                This code is unique in that it always takes the same amount of time
+ *                to run through the critical section so the time offset from capture
+ *                is always constant.  This is important for accurate time stamps on
+ *                transmitted packets.
+ *
+ * @param       time
+ *                a pointer to a BSP_RawTime_t time structure to be filled in
+ *
+ * @return      void (nothing)
+ **************************************************************************************************
+ */
+void MRFI_GetLocalRawTime( mrfi_Time_t* time )
+{
+  uint8_t overflow;    // holds overflow information
+  bspIState_t s;
+  mrfi_Time_t t;
+  
+
+  t.state.lsb.order_test = 1; // identify the compiler ordering
+  t.state.lsb.order_other = 0;
+
+  // fill in the time structure elements
+  t.state.lsb.raw = 1; // indicate this is raw
+
+  t.limit = BSP_TIMER_CLK_KHZ; // indicate the limiting value of the timer
+
+  // fill in the timer parameters
+  t.state.lsb.phy_offset = MRFI_TIMER_SZ;
+
+  // indicate our endianess
+  t.state.lsb.little_endian = ( ( BSP_LITTLE_ENDIAN != 0 ) ? 1 : 0 );
+
+  // hold off interrupts so we get a clean snapshot of the time value
+  BSP_ENTER_CRITICAL_SECTION( s );
+
+  // capture the timer count value checking for an overflow in the processs
+  BSP_TIMER_GET_TIMER_COUNT( t.timer );     // get the timer count value
+
+  overflow = BSP_TIMER_CHECK_OVERFLOW_FLAG( ); // get overflow status
+
+  t.milliseconds = MRFI_Time; // get current milliseconds count
+
+  FHSS_ACTIVE( t.hopCount = sHopCount ); // get current hop count value
+
+  FHSS_ACTIVE( t.logicalChnl = sLogicalChannel ); // get current channel
+
+  BSP_EXIT_CRITICAL_SECTION( s ); // copy complete, re-enable interrupts
+
+  t.state.lsb.overflow = ( ( overflow != 0) ? 1 : 0 );
+
+  MRFI_TIME_COMPRESS_TO_BUFFER( &t );
+  
+  memcpy( time, &t, sizeof( mrfi_Time_t ) );
+
+  return;
+}
+
+/**************************************************************************************************
+ * @fn          MRFI_CookTime
+ *
+ * @brief       Corrects the raw time stamp if an overflow was detected during
+ *                its acquisition.
+ *
+ * @param       time
+ *                a pointer to a BSP_RawTime_t time structure holding a raw time stamp
+ *
+ * @return      void (nothing)
+ **************************************************************************************************
+ */
+void MRFI_CookTime( mrfi_Time_t* time )
+{
+  // if this time needs converting
+  if( ( ( time->state.lsb.order_test != 0 )
+       ? time->state.lsb.raw : time->state.msb.raw ) )
+  {
+    uint16_t carry;
+    uint32_t fraction = 0;
+
+    // if endianess of raw time stamp does not match our endiness
+    if( ( ( time->state.lsb.order_test != 0 )
+              ? time->state.lsb.little_endian : time->state.msb.little_endian )
+        != ( ( BSP_LITTLE_ENDIAN != 0 ) ? 1 : 0 ) )
+    { // swap endianess of the value
+      REVERSE_32(time->limit);
+      REVERSE_16(time->timer);
+      REVERSE_32(time->milliseconds);
+      FHSS_ACTIVE( REVERSE_16(time->hopCount) );
+      if( time->state.lsb.order_test != 0 )
+        time->state.lsb.little_endian = ( ( BSP_LITTLE_ENDIAN != 0 ) ? 1 : 0 );
+      else
+        time->state.msb.little_endian = ( ( BSP_LITTLE_ENDIAN != 0 ) ? 1 : 0 );
+    }
+
+    // if an 8 bit timer, change the rollover and extras counts into 16 bit counts
+    if( ( (time->state.lsb.order_test != 0 )
+         ? time->state.lsb.phy_offset : time->state.msb.phy_offset ) == 1 )
+    {
+      // get number of rollovers that have occurred
+      fraction = ( time->timer >> 8 ) & 0xFF;
+      fraction *= time->rollover; // calculate the number of counts from rollovers
+
+      // if need to add in extra counts for some rollovers
+      if( ( ( time->timer >> 8 ) & 0xFF ) > time->threshold )
+        // add in those extra counts
+        fraction += ( ( time->timer >> 8 ) & 0xFF ) - time->threshold;
+
+      // finally, add in any additional partial rollover counts
+      fraction += time->timer & 0xFF;
+      if( time->state.lsb.order_test != 0 )
+        time->state.lsb.phy_offset = MRFI_TIMER_SZ;
+      else
+        time->state.msb.phy_offset = MRFI_TIMER_SZ;
+    }
+    else // if a 16 bit timer, just fill in the values directly from the time array
+      fraction = time->timer;
+
+    // at this point, the two physical timer bytes will look like a 16 bit timer value
+
+    // change the physical timer values into a fraction of a millisecond
+
+    // normalize value to fractional milliseconds
+    fraction <<= 16;
+    fraction /= time->limit;
+    if( ( ( time->state.lsb.order_test != 0 ) // if timer overflow occurred
+              ? time->state.lsb.overflow : time->state.msb.overflow ) != 0
+            && fraction < 0x8000UL )
+      carry = 1;
+    else // if no overflow
+      carry = 0; // clear the carry value, clear the upper byte too
+    // save the fractional value back into the time structure
+    time->timer = fraction & 0xFFFFUL;
+
+    // now, the physical timer bytes have been normalized to a fraction of a ms
+
+    if( carry != 0 ) // if need to propagate an overflow carry
+    {
+      // adjust hop count value
+      FHSS_ACTIVE( time->hopCount += carry ); // add in any carry value
+
+      // add carry into milliseconds count
+      time->milliseconds += carry;
+    }
+
+    if( time->state.lsb.order_test != 0 )
+      time->state.lsb.raw = 0;
+    else
+      time->state.msb.raw = 0;
+  }
+
+  return;
+}
+
+/**************************************************************************************************
+ * @fn          MRFI_GetTimeDelta
+ *
+ * @brief       Calculates the time delta of end-start and places it in dest.
+ *              Also calculates the delta between the respective hop counts too.
+ *                NOTE: it is allowed to have dest be the same as either start or end.
+ *                NOTE: both start and end will be converted to cooked times
+ *                      regardless what form they were in when this function was called.
+ *
+ * @param       dest  -- where to place the differenc of times
+ *              start -- the starting time
+ *              end   -- the ending time
+ *
+ * @return      void (nothing)
+ **************************************************************************************************
+ */
+void MRFI_GetTimeDelta( mrfi_Time_t* dest, mrfi_Time_t* start, mrfi_Time_t* end )
+{
+  mrfi_Time_t result;
+  MRFI_CookTime( start ); // make sure the start time is in normalized form
+  MRFI_CookTime( end );   // make sure the end time is in normalized form
+
+  // calculate time delta
+  result.milliseconds = end->milliseconds; // initialize accumulator
+  if( end->timer < start->timer ) // if a borrow would occur
+    result.milliseconds -= 1; // propagate it
+  result.milliseconds -= start->milliseconds; // subtract the milliseconds
+  result.timer = end->timer - start->timer; // subtract the timers
+
+  // indicate this time is in normalized form
+  result.state.lsb.order_test = 1; // identify the compiler ordering
+  result.state.lsb.order_other = 0;
+  result.state.lsb.raw = 0;
+
+  *dest = result; // copy the result into the destination
+
+  return;
+}
+
+/**************************************************************************************************
+ * @fn          MRFI_SetTime
+ *
+ * @brief       Sets the current time value to that passed
+ *
+ * @param       t    -- the time value to set the time clock to
+ *
+ * @return      none
+ **************************************************************************************************
+ */
+void MRFI_SetTime( mrfi_Time_t* t )
+{
+  bspIState_t s;
+  BSP_ENTER_CRITICAL_SECTION( s );
+
+  // fill in the non timer values, don't worry about the timer values as they are
+  // fractional and this should get us close enough.
+    MRFI_Time = t->milliseconds;
+    FHSS_ACTIVE( sHopCount = t->hopCount );
+    FHSS_ACTIVE( sLogicalChannel = t->logicalChnl );
+
+  BSP_EXIT_CRITICAL_SECTION( s );
+
+  return;
+}
+
+/****************************************************************************************************
+ * @fn          Mrfi_DelayUsecLong -- Frequency Hopping Enabled
+ *
+ * @brief       Delay the number of microseconds specified by the parameters passed as
+ *                 ms * 1000 + us
+ *              If the parameter <term> is not NULL, then it must point to a function
+ *              which is called during the delay period and if that function returns
+ *              true the delay period is truncated at that point.  If the parameter
+ *              <term> is NULL or never returns true, the function returns after the
+ *              entire delay period has transpired.
+ *
+ * input parameters
+ * @param   ms   - number of milliseconds to delay
+ * @param   us   - number of microseconds to delay
+ * @param   term - function pointer to semaphore test function to truncate delay period
+ *
+ * @return      status; true if timeout truncated due to semaphore test, false otherwise
+ ****************************************************************************************************
+ */
+bool Mrfi_DelayUsecLong(uint32_t ms, uint16_t us, TimeoutTerminator_t term)
+{
+  bool status = false;
+  bool overflow;
+#if BSP_LITTLE_ENDIAN != 0
+  union
+  {
+    struct
+    {
+      uint16_t tmr;
+      uint32_t time;
+    } formatted;
+    struct
+    {
+      uint8_t tmr_lo;
+      uint8_t tmr_hi;
+      uint8_t ms_lo;
+      uint8_t ms_mid_lo;
+      uint8_t ms_mid_hi;
+      uint8_t ms_hi;
+    } bytes;
+    struct
+    {
+      uint16_t tmr;
+      uint16_t ms_lo;
+      uint16_t ms_hi;
+    } words;
+    struct
+    {
+      uint32_t fixed;
+      uint16_t ms_hi;
+    } dword;
+  } time;
+#else
+  union
+  {
+    struct
+    {
+      uint32_t time;
+      uint16_t tmr;
+    } formatted;
+    struct
+    {
+      uint8_t ms_hi;
+      uint8_t ms_mid_hi;
+      uint8_t ms_mid_lo;
+      uint8_t ms_lo;
+      uint8_t tmr_hi;
+      uint8_t tmr_lo;
+    } bytes;
+    struct
+    {
+      uint16_t ms_hi;
+      uint16_t ms_lo;
+      uint16_t tmr;
+    } words;
+    struct
+    {
+      uint16_t ms_hi;
+      uint32_t fixed;
+    } dword;
+  } time;
+#endif
+
+  // capture the current time stamp
+  BSP_CRITICAL_STATEMENT(
+  BSP_TIMER_GET_TIMER_COUNT( time.formatted.tmr );
+  overflow = BSP_TIMER_CHECK_OVERFLOW_FLAG( );
+  time.formatted.time = MRFI_Time );
+
+  if( overflow != 0 && time.bytes.tmr_lo < 100 ) // if an overflow occurred
+    time.formatted.time++; // update captured ms value
+
+  // remove any milliseconds from the microsecond value
+  // we may be here for several loops but since the loop period is much shorter
+  // than the milliseconds we are counting we are ahead of the game.
+  while( us > 999 )
+  {
+    us -= 1000; // remove this millisecond
+    ms++;       // add it back in
+
+    // if we are not in the middle of a communciation we can manage the FHSS schedule
+    // otherwise we don't want to allow any channel changes during communication to the
+    // radio or we will mess with any currently ongoing communciation.  It is assumed
+    // any delay during communcation here will be small and so should not impact FHSS
+    // significantly
+    if( sActiveSPI == false )
+      // manage the FHSS schedule, only allow pumps if there is at least 5
+      // milliseconds of time delay remaining
+      FHSS_ACTIVE( nwk_pllBackgrounder( stx_active != false || ms < 5 ) );
+  }
+
+  // calculate the number of timer counts that are needed to expire
+  // i.e. us /= 1000;
+  // this ugly form is necessary as the BSP_CLK_MHZ macro could be a float
+  // and that would bring in lots of unnecessary library code, also we don't
+  // want to do a divide by a non radix two value, just the multiply
+  {
+    uint32_t tmp = us;
+    tmp *= ( BSP_TIMER_CLK_KHZ * 32UL ) / 125UL;
+    us = tmp >> 8;
+  }
+
+  time.formatted.tmr += us; // add in final timer counts
+  if( time.formatted.tmr < us ) // if an overflow occurred
+    ms++; // account for it
+
+  // adjust for any rollover values ( should only happen once but possibly more
+  while( time.formatted.tmr >= BSP_ROLLOVER_LIMIT )
+  {
+    time.formatted.tmr -= BSP_ROLLOVER_LIMIT; // remove this millisecond
+    ms++; // account for it
+  }
+
+  // if there is at least one millisecond boundary to cross
+  if( ms != 0 )
+  {
+    bool test;
+
+    time.formatted.time += ms; // combine millisecond values
+
+    // wait for millisecond count to reach delay time
+    do // wait for milliseconds to timeout
+    {
+      if( term != NULL && ( status = term( ) ) != false ) // if the semaphore triggers
+        goto bail; // exit the delay routine
+
+      if( time.bytes.ms_lo != ( MRFI_Time & 0xFF ) ) // have we seen least one ms
+      {
+      // if we are not in the middle of a communciation we can manage the FHSS schedule
+      // otherwise we don't want to allow any channel changes during communication to the
+      // radio or we will mess with any currently ongoing communciation.  It is assumed
+      // any delay during communcation here will be small and so should not impact FHSS
+      // significantly
+      if( sActiveSPI == false )
+        // manage the FHSS schedule, only allow pumps if there is at least 5
+        // milliseconds of time delay remaining
+        FHSS_ACTIVE( nwk_pllBackgrounder( stx_active != false
+                                          || time.formatted.time - ms < 5 ) );
+      }
+
+      // make sure time is counted even if interrupts are disabled.
+      if( !BSP_INTERRUPTS_ARE_ENABLED() && BSP_TIMER_CHECK_OVERFLOW_FLAG( ) )
+      {
+        BSP_TIMER_MAN_CLEAR_OVERFLOW_FLAG( ); // clear the flag
+        MRFI_Time++; // count the millisecond
+      }
+
+      BSP_CRITICAL_STATEMENT( ms = MRFI_Time ); // update the test value
+
+      // if in upper half of values, work in signed mode
+      if( ( time.bytes.ms_hi & 0x80) != 0 )
+        test = (int32_t)ms < (int32_t)time.formatted.time;
+      else // if no overflow occurred, work in unsigned mode
+        test = ms < time.formatted.time;
+
+    } while( test != false );
+  }
+
+  // at this point all we have left is the remaining number of microseconds
+  // in the current millisecond before the delay is complete
+
+  ms = time.dword.fixed; // get 16.16 expiration time
+  do
+  {
+    // get snapshot of current timer value
+    BSP_CRITICAL_STATEMENT(
+      BSP_TIMER_GET_TIMER_COUNT( time.formatted.tmr );
+      time.words.ms_lo = (uint16_t)MRFI_Time;
+    );
+  }
+  // wait for microseconds to expire or semaphore to be set
+  while( time.dword.fixed < ms
+          && ( term == NULL || ( status = term( ) ) == false ) );
+
+bail: // jump to here on early exit
+  return status; // either timed out or the semaphore was asserted
+}
+
+/****************************************************************************************************
+ * @fn          Mrfi_DelayUsecSem -- Frequency Hopping Enabled
+ *
+ * @brief       Continuously test the semaphore
+ *              Delay specified number of microseconds checking semaphore for
+ *              early-out.
+ *
+ * input parameters
+ * @param   howLong - number of microseconds to delay
+ *
+ * @return      none
+ ****************************************************************************************************
+ */
+static void Mrfi_DelayUsecSem(uint16_t howLong)
+{
+  Mrfi_DelayUsecLong( 0, howLong, Mrfi_CheckSem ); // delay with semaphore dependency
+  return; // time out complete
+}
+
+/****************************************************************************************************
+ * @fn          Mrfi_CheckSem -- Frequency Hopping Enabled
+ *
+ * @brief       tests the sKillSem status
+ *
+ * input parameters
+ * @param       none
+ *
+ * @return      true if sKillSem != 0
+ ****************************************************************************************************
+ */
+static bool Mrfi_CheckSem( void )
+{
+  return sKillSem;
+}
+
+
+/**************************************************************************************************
+ * @fn          MRFI_ReplyDelay -- Frequency Hopping Enabled
+ *
+ * @brief       Delay number of milliseconds scaled by data rate.  Check semaphore for
+ *              early-out.
+ *
+ * @param       none
+ *
+ * @return      none
+ **************************************************************************************************
+ */
+void MRFI_ReplyDelay()
+{
+  static int c = 0;
+  c++;
+  BSP_CRITICAL_STATEMENT( sReplyDelayContext = 1 );
+  Mrfi_DelayUsecLong( sReplyDelayScalar, 0, Mrfi_CheckSem );
+  BSP_CRITICAL_STATEMENT( sKillSem = sReplyDelayContext = 0 );
+}
+
+#else // MRFI_TIMER_ALWAYS_ACTIVE
 
 /****************************************************************************************************
  * @fn          Mrfi_DelayUsec
@@ -1322,6 +2191,59 @@ static void Mrfi_DelayUsecSem(uint16_t howLong)
   return;
 }
 
+/****************************************************************************************************
+ * @fn          Mrfi_DelayUsecLong -- Frequency Hopping Disabled
+ *
+ * @brief       Delay the number of microseconds specified by the parameters passed as
+ *                 ms * 1000 + us
+ *              If the parameter <term> is not NULL, then it must point to a function
+ *              which is called during the delay period and if that function returns
+ *              true the delay period is truncated at that point.  If the parameter
+ *              <term> is NULL or never returns true, the function returns after the
+ *              entire delay period has transpired.
+ *
+ * input parameters
+ * @param   ms   - number of milliseconds to delay
+ * @param   us   - number of microseconds to delay
+ * @param   term - function pointer to semaphore test function to truncate delay period
+ *
+ * @return      status; true if timeout truncated due to semaphore test, false otherwise
+ ****************************************************************************************************
+ */
+bool Mrfi_DelayUsecLong(uint32_t ms, uint16_t us, TimeoutTerminator_t term)
+{
+  bool timeout = false;
+  bspIState_t s;
+  uint16_t count;
+
+  while (!timeout && ms)
+  {
+    count = APP_USEC_VALUE / MRFI_MAX_DELAY_US;
+    do
+    {
+      BSP_ENTER_CRITICAL_SECTION(s);
+      BSP_DELAY_USECS(MRFI_MAX_DELAY_US);
+      BSP_EXIT_CRITICAL_SECTION(s);
+      if (term != NULL)
+        timeout = term( );
+    } while (!timeout && count--);
+    ms--;
+  }
+  count = us/MRFI_MAX_DELAY_US;
+  if (!timeout && us)
+  {
+    do
+    {
+      BSP_ENTER_CRITICAL_SECTION(s);
+      BSP_DELAY_USECS(MRFI_MAX_DELAY_US);
+      BSP_EXIT_CRITICAL_SECTION(s);
+      if (term != NULL)
+        timeout = term( );
+    } while (!timeout && count--);
+  }
+  return timeout;
+}
+
 /**************************************************************************************************
  * @fn          MRFI_DelayMs
  *
@@ -1378,6 +2300,7 @@ void MRFI_ReplyDelay()
   sReplyDelayContext = 0;
   BSP_EXIT_CRITICAL_SECTION(s);
 }
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
 
 /**************************************************************************************************
  * @fn          MRFI_PostKillSem
@@ -1415,6 +2338,73 @@ uint8_t MRFI_GetRadioState(void)
 {
   return mrfiRadioState;
 }
+
+#ifdef MRFI_TIMER_ALWAYS_ACTIVE
+/**************************************************************************************************
+ * @fn          MRFI_TimerISR
+ *
+ * @brief       Manages the timer interrupts.
+ *              Everytime the timer overflows, this routine increments the
+ *              remaining bytes in the MRFI_Time array.
+ *              It also manages the 1 ms event counter sPending_ms_Events
+ *              See the above macro for implementation
+ *
+ * @param       none
+ *
+ * @return      void (nothing)
+ **************************************************************************************************
+ */
+BSP_ISR_FUNCTION(Mrfi_TimerISR, BSP_TIMER_VECTOR)
+{
+  {
+    static union{ int32_t modulation; int8_t bytes[4]; };
+    modulation += sTmrRateOffset;
+    {
+      uint16_t limit = bytes[3];
+      limit += MRFI_ROLLOVER_LIMIT;
+      BSP_TIMER_SET_OVERFLOW_VALUE( limit );
+    }
+    bytes[3] = 0; // clear upper byte
+  }
+
+  MRFI_Time++;
+
+#ifdef FREQUENCY_HOPPING
+  if( sHopCount == 0 ) /* if ready to hop frequencies */
+  {
+    sHopCount = sHopRate;
+    sHopNowSem = 1; /* indicate a frequency change is due */
+
+    // manage the channel indexer in the isr so if a semaphore is missed,
+    // the channel index is always up to date with the current channel
+    sLogicalChannel++; // increment the channel index
+
+    // check to see if the channel index is rolling over
+    #if MRFI_NUM_LOGICAL_CHANS <= 255
+      if( sLogicalChannel >= MRFI_NUM_LOGICAL_CHANS )
+        sLogicalChannel = 0;
+    #endif
+
+  }
+  else /* if not ready to hop */
+    sHopCount--; /* decrement hop counter */
+
+  if( sHopCount > FHSS_HOP_MARGIN + 2
+      && sHopCount < MRFI_HOP_TIME_ms - 1 - FHSS_HOP_MARGIN )
+    sTxValid = true;
+  else
+    sTxValid = false;
+#endif
+
+  if( sOne_ms_event_hook != NULL ) /* if a 1 millisecond hook function exists */
+    sOne_ms_event_hook( ); /* then call it */
+
+  BSP_TIMER_CLEAR_OVERFLOW_FLAG( ); /* clear the event */
+
+  return;
+}
+
+#endif // MRFI_TIMER_ALWAYS_ACTIVE
 
 /**************************************************************************************************
  *                                  Compile Time Integrity Checks
