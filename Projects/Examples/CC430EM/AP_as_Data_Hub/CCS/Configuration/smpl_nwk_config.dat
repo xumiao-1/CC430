@@ -47,7 +47,7 @@
 --define=MAX_NWK_PAYLOAD=9
 
 # Maximum size of application payload
---define=MAX_APP_PAYLOAD=10
+--define=MAX_APP_PAYLOAD=16
 
 # Default Link token
 --define=DEFAULT_LINK_TOKEN=0x01020304
