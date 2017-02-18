@@ -1,5 +1,4 @@
 //#ifdef TMPSNR_NODE
-#include <stdio.h>
 
 #include "cc430f5137.h"
 #include "bsp.h"
@@ -13,7 +12,7 @@
 #include "rtc_cc430.h"
 #include "lpw_cc430.h"
 #include "soft_timer.h"
-#include "task_scheduler.h"
+
 #include "utils.h"
 #include "../mydef.h"
 #include "tmpsnr.h"
@@ -34,6 +33,30 @@ void tmpsnr_processSyncRep(pkt_app_t *);
 void tmpsnr_processTmpData(pkt_app_t *);
 
 
+void tmpsnr_taskMain(uint16_t arg)
+{
+    node_turn_on_green_led();
+    node_turn_on_red_led();
+
+    /* send time stamp to peers */
+    log(LOG_DEBUG, "[tmpsnr] time = %u, next wkup = %u",
+            (uint32_t)rtc_getTimeOffset(),
+            (uint32_t)gNextWkup);
+
+    /* awake for 3s */
+    soft_setTimer(AWAKE_PERIOD, node_sleepISR, 0);
+
+    /* wake up again after a while */
+    soft_setTimer(gNextWkup-rtc_getTimeOffset(), node_awakeISR, 0);
+}
+
+void tmpsnr_taskSleep(uint16_t arg)
+{
+    node_turn_off_green_led();
+    node_turn_off_red_led();
+    lpw_enterSleep();
+}
+
 void tmpsnr_registerMsgProcessor(void)
 {
     sMsgProcessor[RF_CMD_SYNC_REQ] = tmpsnr_processSyncReq;
@@ -41,7 +64,8 @@ void tmpsnr_registerMsgProcessor(void)
     sMsgProcessor[RF_CMD_DATA_TMP] = tmpsnr_processTmpData;
 }
 
-void tmpsnr_task_readFrame(uint16_t arg) {
+void tmpsnr_task_readFrame(uint16_t arg)
+{
     log(LOG_DEBUG, "enter into readFrame");
 
     /* Have we received a frame on one of the ED connections?
@@ -68,43 +92,11 @@ void tmpsnr_task_readFrame(uint16_t arg) {
     sMsgProcessor[lPkt.hdr.cmd](&lPkt);
 }
 
-void tmpsnr_task_addDevice(uint16_t arg) {
+void tmpsnr_task_addDevice(uint16_t arg)
+{
     log(LOG_DEBUG, "link to an AP");
 }
 
-void tmpsnr_task_sleep(uint16_t arg) {
-    node_turn_off_green_led();
-    node_turn_off_red_led();
-    lpw_enterSleep();
-}
-
-void tmpsnr_tmr_sleepISR(uint16_t arg) {
-    post_task(tmpsnr_task_sleep, 0);
-}
-
-void tmpsnr_tmr_awakeISR(uint16_t arg) {
-    lpw_exitSleep();
-
-    /* actions after wakeup */
-    post_task(tmpsnr_task_mytask, arg);
-
-    /* awake for 3s */
-    soft_setTimer(AWAKE_PERIOD, tmpsnr_tmr_sleepISR, 0);
-
-    /* wake up again after 10s */
-    soft_setTimer(AWAKE_INTERVAL, tmpsnr_tmr_awakeISR, 0);
-    gNextWkup += AWAKE_INTERVAL;
-}
-
-void tmpsnr_task_mytask(uint16_t arg) {
-    node_turn_on_green_led();
-    node_turn_on_red_led();
-
-    /* send time stamp to peers */
-    log(LOG_DEBUG, "time = %u, next wkup = %u",
-            (uint32_t)rtc_getTimeOffset(),
-            (uint32_t)gNextWkup);
-}
 
 void tmpsnr_processSyncReq(pkt_app_t *aInPkt)
 {
@@ -125,8 +117,8 @@ void tmpsnr_processSyncRep(pkt_app_t *aInPkt)
     gNextWkup = lMsg->fTimeWkup;
 
     /* sleep */
-    soft_setTimer(lMsg->fTimeWkup - lMsg->fTimeOffset, tmpsnr_tmr_awakeISR, 0);
-    post_task(tmpsnr_task_sleep, 0);
+    soft_setTimer(lMsg->fTimeWkup - lMsg->fTimeOffset, node_awakeISR, 0);
+    post_task(tmpsnr_taskSleep, 0);
 
     return;
 }

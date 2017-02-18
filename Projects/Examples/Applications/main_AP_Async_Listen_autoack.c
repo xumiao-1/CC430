@@ -48,7 +48,7 @@
 
 #include "task_scheduler.h"
 #include "rtc_cc430.h"
-#include "lpw_cc430.h"
+//#include "lpw_cc430.h"
 #include "Si705x.h"
 #include "utils.h"
 #include "delay.h"
@@ -61,8 +61,8 @@
 #error ERROR: Must define the macro APP_AUTO_ACK for this application.
 #endif
 
-#define AWAKE_INTERVAL (5000)
-#define AWAKE_PERIOD   (AWAKE_INTERVAL / 2)
+//#define AWAKE_INTERVAL (5000)
+//#define AWAKE_PERIOD   (AWAKE_INTERVAL / 2)
 
 /**************************** COMMENTS ON ASYNC LISTEN APPLICATION ***********************
  Summary:
@@ -157,58 +157,10 @@ static volatile uint8_t sBlinky = 0;
 //    return RTCNT1 + (RTCNT2 << 8);
 //}
 
-void task_mytask(uint16_t arg) {
-    node_turn_on_green_led();
-    node_turn_on_red_led();
 
-    /* send time stamp to peers */
-    log(LOG_DEBUG, "[mytask] time = %u, next wkup = %u",
-            (uint32_t)rtc_getTimeOffset(),
-            (uint32_t)gNextWkup);
 
-//    uint8_t i;
-//    for (i=0; i<sNumCurrentPeers; i++) {
-//        uint32_t lTmOffset = rtc_getTimeOffset();
-//        smplStatus_t rc = SMPL_SendOpt(sLID[i], (uint8_t*)&lTmOffset, sizeof(lTmOffset), SMPL_TXOPTION_ACKREQ);
-//        log(LOG_DEBUG, "[send frame] link %d: %u\r\n",
-//                (int32_t)sLID[i],
-//                (uint32_t)lTmOffset);
-//
-//        switch (rc) {
-//        case SMPL_SUCCESS:
-//            break;
-//
-//        case SMPL_NO_ACK:
-//            break;
-//
-//        default:
-//            break;
-//        }
-//    }
-}
 
-void task_sleep(uint16_t arg) {
-    node_turn_off_green_led();
-    node_turn_off_red_led();
-    lpw_enterSleep();
-}
 
-void tmr_sleepISR(uint16_t arg) {
-    post_task(task_sleep, 0);
-}
-void tmr_awakeISR(uint16_t arg) {
-    lpw_exitSleep();
-
-    /* actions after wakeup */
-    post_task(task_mytask, arg);
-
-    /* awake for 3s */
-    soft_setTimer(AWAKE_PERIOD, tmr_sleepISR, 0);
-
-    /* wake up again after 10s */
-    soft_setTimer(AWAKE_INTERVAL, tmr_awakeISR, 0);
-    gNextWkup += AWAKE_INTERVAL;
-}
 
 void main(void) {
     /* init the node */
@@ -257,10 +209,7 @@ void main(void) {
 
     /* main work loop */
 #if 1
-    uint32_t curTime = rtc_getTimeOffset();
-    gNextWkup =  curTime + AWAKE_INTERVAL;
-    soft_setTimer(AWAKE_INTERVAL, tmr_awakeISR, 0);
-//    post_task(task_wakeup, 0);
+    soft_setTimer(AWAKE_INTERVAL, node_awakeISR, 0);
     while (1) {
         task_scheduler();
     }

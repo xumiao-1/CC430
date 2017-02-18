@@ -5,6 +5,10 @@
 /**************************************************
  * MACRO definitions
  *************************************************/
+#define AWAKE_INTERVAL (5000)
+#define AWAKE_PERIOD   (AWAKE_INTERVAL / 2)
+
+
 
 /* green: LED1 */
 #define node_turn_on_green_led()      BSP_TURN_ON_LED1()
@@ -24,6 +28,8 @@
  * PUBLIC FUNCTIONS
  *************************************************/
 bool node_init(void);
+void node_sleepISR(uint16_t);
+void node_awakeISR(uint16_t);
 
 
 

@@ -6,6 +6,8 @@
 //#include "bsp.h"
 //#include "mydef.h"
 
+void wrkstn_taskMain(uint16_t);
+void wrkstn_taskSleep(uint16_t);
 void wrkstn_registerMsgProcessor(void);
 void wrkstn_task_readFrame(uint16_t);
 void wrkstn_task_addDevice(uint16_t);

@@ -10,6 +10,8 @@
 #include "nwk_frame.h"
 #include "nwk.h"
 #include "rtc_cc430.h"
+#include "lpw_cc430.h"
+#include "soft_timer.h"
 
 #include "utils.h"
 #include "../mydef.h"
@@ -29,6 +31,35 @@ void wrkstn_processSyncRep(pkt_app_t *);
 void wrkstn_processTmpData(pkt_app_t *);
 
 void sendTimeSync(linkID_t);
+
+
+void wrkstn_taskMain(uint16_t arg)
+{
+    node_turn_on_green_led();
+    node_turn_on_red_led();
+
+    /* send time stamp to peers */
+    log(LOG_DEBUG, "[wrkstn] time = %u, next wkup = %u",
+            (uint32_t)rtc_getTimeOffset(),
+            (uint32_t)gNextWkup);
+
+    /* awake for 3s */
+    soft_setTimer(AWAKE_PERIOD, node_sleepISR, 0);
+
+    /* wake up again after 10s */
+    if (gNextWkup <= rtc_getTimeOffset()) {
+        log(LOG_WARNING, "next wakeup time <= current time");
+    } else {
+        soft_setTimer(gNextWkup-rtc_getTimeOffset(), node_awakeISR, 0);
+    }
+}
+
+void wrkstn_taskSleep(uint16_t arg)
+{
+    node_turn_off_green_led();
+    node_turn_off_red_led();
+    lpw_enterSleep();
+}
 
 void wrkstn_registerMsgProcessor(void)
 {
