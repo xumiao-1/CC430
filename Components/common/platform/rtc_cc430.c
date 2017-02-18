@@ -34,33 +34,15 @@ void rtc_init(void) {
 }
 
 uint32_t rtc_getTimeBase(void) {
-    uint32_t retVal;
-    bspIState_t lState;
-
-    BSP_ENTER_CRITICAL_SECTION(lState);
-    retVal = sTimeBase;
-    BSP_EXIT_CRITICAL_SECTION(lState);
-
-    return retVal;
+    return sTimeBase;
 }
 
 uint32_t rtc_getTimeOffset(void) {
-    uint32_t retVal;
-    bspIState_t lState;
-
-    BSP_ENTER_CRITICAL_SECTION(lState);
-    retVal = sTimeOffset;
-    BSP_EXIT_CRITICAL_SECTION(lState);
-
-    return retVal;
+    return sTimeOffset;
 }
 
 void rtc_setTimeBase(uint32_t aInBase) {
-    bspIState_t lState;
-
-    BSP_ENTER_CRITICAL_SECTION(lState);
-    sTimeBase = aInBase;
-    BSP_EXIT_CRITICAL_SECTION(lState);
+    BSP_CRITICAL_STATEMENT(sTimeBase = aInBase);
 }
 
 void rtc_setTimeOffset(uint32_t aInOffset) {
