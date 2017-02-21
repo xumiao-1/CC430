@@ -58,6 +58,8 @@ void rtc_setTimeOffset(uint32_t aInOffset) {
 
 #pragma vector=RTC_VECTOR
 __interrupt void RTC_ISR(void) {
+    uint32_t lTim0 = 0, lTim1 = 0;
+    
     switch (__even_in_range(RTCIV, 16)) {
     case 0:
         break;                         // No interrupts
@@ -77,7 +79,13 @@ __interrupt void RTC_ISR(void) {
 
     case 10:                           // RT1PSIFG
         /* update time offset */
+#if 0
         sTimeOffset = ((uint32_t) RTCTIM1) << 16 | (uint32_t) RTCTIM0;
+#else
+        lTim0 = (uint32_t) RTCTIM0;
+        lTim1 = ((uint32_t) RTCTIM1) << 16;
+        sTimeOffset = lTim1 | lTim0;
+#endif // 0
 
         /* soft timer ISR */
         soft_ISR(sTimeOffset);

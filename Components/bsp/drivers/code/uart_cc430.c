@@ -9,8 +9,6 @@ static bool uart_tx_suspend = false;
 static void uart_tx_irq( void );
 static void uart_rx_irq( void );
 
-//#pragma vector=USCI_A0_VECTOR
-//__interrupt void uart_rx_tx_enter_irq( void );
 #pragma vector=USCI_A0_VECTOR
 __interrupt void uart_rx_tx_enter_irq( void )
 {

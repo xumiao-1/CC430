@@ -97,7 +97,7 @@ void ExtenalFlash_Sector_Erase( long Adress )  //flash ²Á³ý²Ù×÷
 
 void ExtenalFlash_Write(unsigned char *p, int count ,long addr)  //flash Ð´²Ù×÷
 {
-	int i;
+        int i = 0;
 
         while((ExtenalFlash_Read_Register() & 0x01)==0x01);// check busy ?
         ExtenalFlash_Write_Enable();
@@ -137,7 +137,8 @@ void ExtenalFlash_Write(unsigned char *p, int count ,long addr)  //flash Ð´²Ù×÷
 
 void ExtenalFlash_Read(unsigned char *p, long addr , int count)  //flash ¶Á²Ù×÷
 {
-	int i;
+        int i = 0;
+        
         while((ExtenalFlash_Read_Register() & 0x01)==0x01);// check busy ?
         CS_0;
         

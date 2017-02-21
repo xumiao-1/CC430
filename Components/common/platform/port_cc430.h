@@ -2,6 +2,9 @@
 #define _PORT_CC430_H_
 
 
+//#pragma vector=PORT2_VECTOR
+__interrupt void PORT2_ISR(void);
+
 /**
  * P2.0 used for exit LPW
  */

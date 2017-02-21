@@ -7,6 +7,9 @@
 #define TICKS_PER_SECOND (1024)
 
 
+//#pragma vector=RTC_VECTOR
+__interrupt void RTC_ISR(void);
+
 void rtc_init(void);
 uint32_t rtc_getTimeBase(void);
 uint32_t rtc_getTimeOffset(void);

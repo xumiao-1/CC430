@@ -385,6 +385,9 @@ typedef bool ( *uart_put_rx_data_type )( unsigned char );
 ////////////////////////////////////////////////////////////////////////////////
 // function prototypes
 
+//#pragma vector=USCI_A0_VECTOR
+__interrupt void uart_rx_tx_enter_irq( void );
+
 // initializes the uart for operation.  this function should be called before
 // any other uart functions are called.
 void uart_init( void );
