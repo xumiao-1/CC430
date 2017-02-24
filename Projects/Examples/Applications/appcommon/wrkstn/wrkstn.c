@@ -1,5 +1,5 @@
 //#ifdef WRKSTN_NODE
-
+#include <string.h>
 #include "cc430f5137.h"
 #include "bsp.h"
 #include "mrfi.h"
