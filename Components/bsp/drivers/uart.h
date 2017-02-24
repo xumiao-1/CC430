@@ -38,8 +38,14 @@
 /******************************************************************************
  * INCLUDES
  */
+#ifdef __STD_C__
 #include <stdbool.h> /* supports bool, true, and false */ 
 
+#else
+#define bool unsigned char
+#define true 1
+#define false 0 
+#endif
 
 #include <stddef.h>  /* supports NULL macro */
 
@@ -262,13 +268,8 @@ SFRUNION( _U1GCR_,   0xFC, DECL_BIT_FIELDS_4( unsigned char, U1CPOL, 1, U1CPHA, 
 #define UART_ACTIVE_BUSY 1
 
 /* uart parity states */
-#if ( defined MRFI_CC2530 ) || ( defined MRFI_CC2531 ) || ( defined MRFI_CC2533 )
-  #define UART_PARITY_ENABLED  1
-  #define UART_PARITY_DISABLED 0
-#else
-  #define UART_PARITY_ENABLED  0
-  #define UART_PARITY_DISABLED 1
-#endif
+#define UART_PARITY_ENABLED  0
+#define UART_PARITY_DISABLED 1
 
 /* uart flush the uart */
 #define UART_FLUSH_FLUSH_NOW 1
@@ -281,13 +282,8 @@ SFRUNION( _U1GCR_,   0xFC, DECL_BIT_FIELDS_4( unsigned char, U1CPOL, 1, U1CPHA, 
 /* uart bit 9 or parity states */
 #define UART_D9_HI          1
 #define UART_D9_LO          0
-#if ( defined MRFI_CC2530 ) || ( defined MRFI_CC2531 ) || ( defined MRFI_CC2533 )
-  #define UART_D9_EVEN_PARITY 1
-  #define UART_D9_ODD_PARITY  0
-#else
-  #define UART_D9_EVEN_PARITY 0
-  #define UART_D9_ODD_PARITY  1
-#endif
+#define UART_D9_EVEN_PARITY 0
+#define UART_D9_ODD_PARITY  1
 #define UART_SET_PARITY_EVEN( uart )       ( UART_D9( uart ) = UART_D9_EVEN_PARITY )
 #define UART_SET_PARITY_ODD( uart )        ( UART_D9( uart ) = UART_D9_ODD_PARITY )
 #define UART_SET_PARITY_MODE( uart, mode ) ( ( mode == UART_PARITY_EVEN ) \

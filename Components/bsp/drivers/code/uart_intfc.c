@@ -39,9 +39,6 @@
 #include <stdlib.h>
 
 #include "bsp.h"
-#ifdef FREQUENCY_HOPPING
-#include "nwk_pll.h"
-#endif
 
 /******************************************************************************
  * CONSTANTS AND DEFINES
@@ -300,11 +297,6 @@ bool tx_send_wait( const void* data, size_t len )
 
         len -= sz;              /* adjust the count of remaining data to send */
         }
-      #ifdef FREQUENCY_HOPPING
-      // run the pll charge pump if frequency hopping active
-      //   only send pump requests if there are still characters still to send
-      nwk_pllBackgrounder( len == 0 );
-      #endif
       }
     
     return true; /* indicate success */

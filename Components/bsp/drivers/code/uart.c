@@ -74,16 +74,7 @@ __idata_reentrant __interrupt void uart_0_tx_irq( void );
 #pragma vector=UART_IRQ_VECTOR( UART_NUMBER_0, TX )
 __idata_reentrant __interrupt void uart_0_tx_irq( void )
 {
-  /* work-a-round for XCH instruction */
-  bspIState_t istate;
-  istate = __bsp_GET_ISTATE__();
-  BSP_ENABLE_INTERRUPTS();
-
   uart_tx_irq( );
-
-  /* work-a-round for XCH instruction */
-  __bsp_RESTORE_ISTATE__(istate);
-  
   return;
 }
 
@@ -92,16 +83,7 @@ __idata_reentrant __interrupt void uart_1_tx_irq( void );
 #pragma vector=UART_IRQ_VECTOR( UART_NUMBER_1, TX )
 __idata_reentrant __interrupt void uart_1_tx_irq( void )
 {
-  /* work-a-round for XCH instruction */
-  bspIState_t istate;
-  istate = __bsp_GET_ISTATE__();
-  BSP_ENABLE_INTERRUPTS();
-
   uart_tx_irq( );
-
-  /* work-a-round for XCH instruction */
-  __bsp_RESTORE_ISTATE__(istate);
-  
   return;
 }
 
@@ -110,16 +92,7 @@ __idata_reentrant __interrupt void uart_0_rx_irq( void );
 #pragma vector=UART_IRQ_VECTOR( UART_NUMBER_0, RX )
 __idata_reentrant __interrupt void uart_0_rx_irq( void )
 {
-  /* work-a-round for XCH instruction */
-  bspIState_t istate;
-  istate = __bsp_GET_ISTATE__();
-  BSP_ENABLE_INTERRUPTS();
-
   uart_rx_irq( );
-
-  /* work-a-round for XCH instruction */
-  __bsp_RESTORE_ISTATE__(istate);
-  
   return;
 }
 
@@ -128,16 +101,7 @@ __idata_reentrant __interrupt void uart_1_rx_irq( void );
 #pragma vector=UART_IRQ_VECTOR( UART_NUMBER_1, RX )
 __idata_reentrant __interrupt void uart_1_rx_irq( void )
 {
-  /* work-a-round for XCH instruction */
-  bspIState_t istate;
-  istate = __bsp_GET_ISTATE__();
-  BSP_ENABLE_INTERRUPTS();
-
   uart_rx_irq( );
-
-  /* work-a-round for XCH instruction */
-  __bsp_RESTORE_ISTATE__(istate);
-  
   return;
 }
 
