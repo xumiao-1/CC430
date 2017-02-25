@@ -25,11 +25,6 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>Applications/appcommon</name>
-			<type>2</type>
-			<location>C:/Users/Miao/Documents/GitHub/CC430/Projects/Examples/Applications/appcommon</location>
-		</link>
-		<link>
 			<name>Applications/configuration/smpl_nwk_config.dat</name>
 			<type>1</type>
 			<locationURI>DEV_ROOT/Projects/Examples/CC430EM/AP_as_Data_Hub/CCS/Configuration/smpl_nwk_config.dat</locationURI>
