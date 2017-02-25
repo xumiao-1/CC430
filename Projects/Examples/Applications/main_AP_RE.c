@@ -38,9 +38,12 @@
 #include "bsp_leds.h"
 #include "nwk_types.h"
 #include "nwk_api.h"
+#include "nwk_pll.h"
 
-#include "app_remap_led.h"
-
+/* For FHSS systems, calls to NWK_DELAY() will also call nwk_pllBackgrounder()
+ * during the delay time so if you use the system delay mechanism in a loop,
+ * you don't need to also call the nwk_pllBackgrounder() function.
+ */
 #define SPIN_ABOUT_A_SECOND   NWK_DELAY(1000)
 
 void toggleLED(uint8_t);
@@ -63,6 +66,11 @@ void main (void)
   }
 #endif /* I_WANT_TO_CHANGE_DEFAULT_ROM_DEVICE_ADDRESS_PSEUDO_CODE */
 
+  /* On FHSS systems the call to SMPL_Init will not return until we have
+   * locked onto a reference clock.  Also, on return the radio will always
+   * be on in receive mode (at least for now).
+   */
+  
   while (SMPL_SUCCESS != SMPL_Init((uint8_t (*)(linkID_t))0))
   {
     toggleLED(1);
@@ -104,7 +112,8 @@ void main (void)
     SMPL_Ioctl(IOCTL_OBJ_AP_JOIN, IOCTL_ACT_ON, 0);
   }
 #endif
-  while (1) ;
+  while (1)
+    FHSS_ACTIVE( nwk_pllBackgrounder( false ) ); /* manage FHSS */
 }
 
 void toggleLED(uint8_t which)

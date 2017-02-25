@@ -40,8 +40,6 @@
 #include "bsp_leds.h"
 #include "bsp_buttons.h"
 
-#include "app_remap_led.h"
-
 /*         SANITY CHECKS                   */
 #if defined( BSP_BOARD_RFUSB )
 #error ERROR: RFUSB does not support default channel sniffer build (has only 1 LED)
@@ -49,6 +47,10 @@
 
 #if ( NUM_CONNECTIONS > 0 )
 #error ERROR: NUM_CONNECTIONS must be 0 when building channel sniffer
+#endif
+
+#ifndef FREQUENCY_AGILITY
+#error ERROR: FREQUENCY_AGILITY must be defined when building channel sniffer
 #endif
 /*         END SANITY CHECKS                   */
 

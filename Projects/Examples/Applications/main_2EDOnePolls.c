@@ -39,8 +39,7 @@
 #include "nwk_api.h"
 #include "bsp_leds.h"
 #include "bsp_buttons.h"
-
-#include "app_remap_led.h"
+#include "nwk_pll.h"
 
 static void linkTo(void);
 static void linkFrom(void);
@@ -49,6 +48,10 @@ void toggleLED(uint8_t);
 
 static uint8_t sTid = 0;
 
+/* For FHSS systems, calls to NWK_DELAY() will also call nwk_pllBackgrounder()
+ * during the delay time so if you use the system delay mechanism in a loop,
+ * you don't need to also call the nwk_pllBackgrounder() function.
+ */
 #define SPIN_ABOUT_A_SECOND   NWK_DELAY(1000)
 #define SPIN_ABOUT_3_SECONDS  NWK_DELAY(3000)
 
@@ -72,6 +75,11 @@ void main (void)
   }
 #endif /* I_WANT_TO_CHANGE_DEFAULT_ROM_DEVICE_ADDRESS_PSEUDO_CODE */
 
+  /* On FHSS systems the call to SMPL_Init will not return until we have
+   * locked onto a reference clock.  Also, on return the radio will always
+   * be on in receive mode (at least for now).
+   */
+  
   /* Keep trying to join (a side effect of successful initialization) until
    * successful. Toggle LEDS to indicate that joining has not occurred.
    */
@@ -79,7 +87,7 @@ void main (void)
   {
     toggleLED(1);
     toggleLED(2);
-    SPIN_ABOUT_A_SECOND;
+    SPIN_ABOUT_A_SECOND; /* calls nwk_pllBackgrounder for us */
   }
 
 
@@ -90,6 +98,8 @@ void main (void)
 #if !defined( BSP_BOARD_EZ430RF ) && !defined( BSP_BOARD_RFUSB ) && !defined( BSP_BOARD_CC430EM )
   /* watch for button press to select context */
   do {
+    /* no delay in this loop manage FHSS manually */
+    FHSS_ACTIVE( nwk_pllBackgrounder( false ) );
     if (BSP_BUTTON1())
     {
       button = 1;
@@ -102,7 +112,9 @@ void main (void)
 #else
   /* only one button on the eZ430, RFUSB, and CC430EM boards. */
   button = 1;
-  while (!BSP_BUTTON1()) ;
+  while (!BSP_BUTTON1())
+    /* no delay in this loop manage FHSS manually */
+    FHSS_ACTIVE( nwk_pllBackgrounder( false ) );
 
   SPIN_ABOUT_3_SECONDS;
 
@@ -128,7 +140,9 @@ void main (void)
       break;
   }
 
-  while (1) ;
+  while (1)
+    /* no delay in this loop manage FHSS manually */
+    FHSS_ACTIVE( nwk_pllBackgrounder( false ) );
 }
 
 static void linkFrom()
@@ -138,7 +152,7 @@ static void linkFrom()
 
    /* listen for link forever... */
    while (1)
-   {
+   {  /* SMPL_LinkListen calls nwk_pllBackgrounder for us */
      if (SMPL_SUCCESS == SMPL_LinkListen(&linkID1))
      {
        break;
@@ -151,10 +165,14 @@ static void linkFrom()
 
    while (1)
    {
-     /* sleeping... */
+     /* sleeping... FHSS systems cannot sleep (for now) */
+#ifndef FREQUENCY_HOPPING
      SMPL_Ioctl(IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_SLEEP, 0);
-     SPIN_ABOUT_A_SECOND;  /* emulate MCU sleeping */
+#endif
+     SPIN_ABOUT_A_SECOND;  /* emulate MCU sleeping, manages FHSS systems too */
+#ifndef FREQUENCY_HOPPING
      SMPL_Ioctl(IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_AWAKE, 0);
+#endif
 
      /* Any meesages "received"?
       *
@@ -247,22 +265,25 @@ static void linkTo()
   while (1)
   {
     /* Send a message every 5 seconds. This could be emulating a sleep. */
-#ifndef FREQUENCY_AGILITY
-    /* If no FA we don't need to listen for the broadcast channel change command */
+#if !( defined FREQUENCY_AGILITY ) && !( defined FREQUENCY_HOPPING )
+    /* If no FA or FHSS we don't need to listen for the broadcast channel change command */
     SMPL_Ioctl(IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_SLEEP, 0);
 #endif
+    SPIN_ABOUT_A_SECOND; /* manages FHSS implicitly */
     SPIN_ABOUT_A_SECOND;
     SPIN_ABOUT_A_SECOND;
     SPIN_ABOUT_A_SECOND;
     SPIN_ABOUT_A_SECOND;
-    SPIN_ABOUT_A_SECOND;
-#ifndef FREQUENCY_AGILITY
+#if !( defined FREQUENCY_AGILITY ) && !( defined FREQUENCY_HOPPING )
     /* See comment above...If Frequency Agility is not enabled we never listen
      * so it is OK if we just awaken leaving Rx off.
      */
     SMPL_Ioctl(IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_AWAKE, 0);
 #endif
 
+    /* delay around frequency change margin before sending */
+    FHSS_ACTIVE( while( nwk_pllBackgrounder( false ) != false ) );
+    
     if (SMPL_SUCCESS == SMPL_Send(linkID1, msg, sizeof(msg)))
     {
       /* toggle LED 1 to indicate a send */

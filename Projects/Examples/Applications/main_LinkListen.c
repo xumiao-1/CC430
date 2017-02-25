@@ -40,8 +40,7 @@
 #include "nwk_api.h"
 #include "bsp_leds.h"
 #include "bsp_buttons.h"
-
-#include "app_remap_led.h"
+#include "nwk_pll.h"
 
 static void linkFrom(void);
 
@@ -72,6 +71,11 @@ void main (void)
   }
 #endif /* I_WANT_TO_CHANGE_DEFAULT_ROM_DEVICE_ADDRESS_PSEUDO_CODE */
 
+  /* On FHSS systems the call to SMPL_Init will not return until we have
+   * locked onto a reference clock.  Also, on return the radio will always
+   * be on in receive mode (at least for now).
+   */
+  
   /* This call will fail because the join will fail since there is no Access Point
    * in this scenario. But we don't care -- just use the default link token later.
    * We supply a callback pointer to handle the message returned by the peer.
@@ -87,9 +91,10 @@ void main (void)
   {
     toggleLED(1);
   }
-
+    
   /* wait for a button press... */
   do {
+    FHSS_ACTIVE( nwk_pllBackgrounder( false ) ); /* manage FHSS */
     if (BSP_BUTTON1() || BSP_BUTTON2())
     {
       break;
@@ -115,6 +120,7 @@ static void linkFrom()
    /* listen for link forever... */
   while (1)
   {
+    /* SMPL_LinkListen handles FHSS implicittly */
     if (SMPL_SUCCESS == SMPL_LinkListen(&sLinkID2))
     {
       break;
@@ -130,6 +136,8 @@ static void linkFrom()
 
    while (1)
    {
+    FHSS_ACTIVE( nwk_pllBackgrounder( false ) ); /* manage FHSS */
+
      /* Wait for a frame to be received. The Rx handler, which is running in
       * ISR thread, will post to this semaphore allowing the application to
       * send the reply message in the user thread.

@@ -40,14 +40,17 @@
 #include "bsp_leds.h"
 #include "bsp_buttons.h"
 #include "nwk.h"
-
-#include "app_remap_led.h"
+#include "nwk_pll.h"
 
 static void monitorForBadNews(void);
 
 void toggleLED(uint8_t);
 static void start2Babble(void);
 
+/* For FHSS systems, calls to NWK_DELAY() will also call nwk_pllBackgrounder()
+ * during the delay time so if you use the system delay mechanism in a loop,
+ * you don't need to also call the nwk_pllBackgrounder() function.
+ */
 #define SPIN_ABOUT_A_SECOND           NWK_DELAY(1000)
 #define SPIN_ABOUT_A_QUARTER_SECOND   NWK_DELAY(250)
 
@@ -90,6 +93,7 @@ void main (void)
 
   /* wait for a button press... */
   do {
+    FHSS_ACTIVE( nwk_pllBackgrounder( false ) ); /* manage FHSS */
     if (BSP_BUTTON1() || BSP_BUTTON2())
     {
       break;
@@ -113,15 +117,18 @@ static void monitorForBadNews()
   toggleLED(2);
   toggleLED(1);
 
+  /* frequency hopping doesn't support sleeping just yet */
+#ifndef FREQUENCY_HOPPING
   /* start the radio off sleeping */
   SMPL_Ioctl( IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_SLEEP, 0);
+#endif
 
   while (1)
   {
     /* spoof MCU sleeping... */
     for (i=0; i<CHECK_RATE; ++i)
     {
-      SPIN_ABOUT_A_SECOND;
+      SPIN_ABOUT_A_SECOND; /* manages FHSS implicitly */
     }
 
     toggleLED(1);
@@ -131,16 +138,23 @@ static void monitorForBadNews()
       /* sensor activated. start babbling. */
       start2Babble();
     }
+
+    /* frequency hopping doesn't support sleeping just yet */
+#ifndef FREQUENCY_HOPPING
     /* wake up radio. we need it to listen for others babbling. */
     SMPL_Ioctl( IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_AWAKE, 0);
     /* turn on RX. default is RX off. */
     SMPL_Ioctl( IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_RXON, 0);
+#endif
 
     /* stay on "long enough" to see if someone else is babbling */
     SPIN_ABOUT_A_QUARTER_SECOND;
 
+    /* frequency hopping doesn't support sleeping just yet */
+#ifndef FREQUENCY_HOPPING
     /* we're done with radio. shut it down */
     SMPL_Ioctl( IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_SLEEP, 0);
+#endif
 
     /* got message? */
     if (SMPL_SUCCESS == SMPL_Receive(SMPL_LINKID_USER_UUD, msg, &len))
@@ -176,8 +190,11 @@ static void start2Babble()
 {
   uint8_t msg[1];
 
+    /* frequency hopping doesn't support sleeping just yet */
+#ifndef FREQUENCY_HOPPING
   /* wake up radio. */
   SMPL_Ioctl( IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_AWAKE, 0);
+#endif
 
   /* Send the bad news message. To prevent confusion with different "networks"
    * such as neighboring smoke alarm arrays send a token controlled by a DIP 
@@ -186,6 +203,7 @@ static void start2Babble()
   msg[0] = BAD_NEWS;
   while (1)
   {
+    FHSS_ACTIVE( nwk_pllBackgrounder( false ) ); /* manage FHSS */
     /*wait "a while" */
     NWK_DELAY(100);
     /* babble... */

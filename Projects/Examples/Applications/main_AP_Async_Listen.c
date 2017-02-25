@@ -42,8 +42,7 @@
 #include "nwk_api.h"
 #include "nwk_frame.h"
 #include "nwk.h"
-
-#include "app_remap_led.h"
+#include "nwk_pll.h"
 
 void toggleLED(uint8_t);
 
@@ -136,7 +135,9 @@ void main (void)
 {
   bspIState_t intState;
 
+#ifdef FREQUENCY_AGILITY
   memset(sSample, 0x0, sizeof(sSample));
+#endif
 
   BSP_Init();
 
@@ -169,6 +170,9 @@ void main (void)
   /* main work loop */
   while (1)
   {
+    /* manage FHSS schedule if FHSS is active */
+    FHSS_ACTIVE( nwk_pllBackgrounder( false ) );
+    
     /* Wait for the Join semaphore to be set by the receipt of a Join frame from a
      * device that supports an End Device.
      *
@@ -181,7 +185,7 @@ void main (void)
     {
       /* listen for a new connection */
       while (1)
-      {
+      { /* SMPL_LinkListen will call nwk_PllBackgrounder for us if FHSS active */
         if (SMPL_SUCCESS == SMPL_LinkListen(&sLID[sNumCurrentPeers]))
         {
           break;

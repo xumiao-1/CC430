@@ -39,8 +39,7 @@
 #include "nwk_api.h"
 #include "bsp_leds.h"
 #include "bsp_buttons.h"
-
-#include "app_remap_led.h"
+#include "nwk_pll.h"
 
 static void linkTo(void);
 
@@ -52,6 +51,10 @@ static linkID_t sLinkID1 = 0;
 /* application Rx frame handler. */
 static uint8_t sRxCallback(linkID_t);
 
+/* For FHSS systems, calls to NWK_DELAY() will also call nwk_pllBackgrounder()
+ * during the delay time so if you use the system delay mechanism in a loop,
+ * you don't need to also call the nwk_pllBackgrounder() function.
+ */
 #define SPIN_ABOUT_A_SECOND  NWK_DELAY(1000)
 
 void main (void)
@@ -72,6 +75,11 @@ void main (void)
   }
 #endif /* I_WANT_TO_CHANGE_DEFAULT_ROM_DEVICE_ADDRESS_PSEUDO_CODE */
 
+  /* On FHSS systems the call to SMPL_Init will not return until we have
+   * locked onto a reference clock.  Also, on return the radio will always
+   * be on in receive mode (at least for now).
+   */
+  
   /* This call will fail because the join will fail since there is no Access Point 
    * in this scenario. But we don't care -- just use the default link token later. 
    * We supply a callback pointer to handle the message returned by the peer. 
@@ -90,6 +98,7 @@ void main (void)
 
   /* wait for a button press... */
   do {
+    FHSS_ACTIVE( nwk_pllBackgrounder( false ) ); /* manage FHSS */
     if (BSP_BUTTON1() || BSP_BUTTON2())
     {
       break;
@@ -112,7 +121,7 @@ static void linkTo()
     /* blink LEDs until we link successfully */
     toggleLED(1);
     toggleLED(2);
-    SPIN_ABOUT_A_SECOND;
+    SPIN_ABOUT_A_SECOND; /* manages FHSS implicitly */
   }
 
   /* we're linked. turn off red LED. received messages will toggle the green LED. */
@@ -121,25 +130,27 @@ static void linkTo()
     toggleLED(2);
   }
 
+#ifndef FREQUENCY_HOPPING
   /* turn on RX. default is RX off. */
   SMPL_Ioctl( IOCTL_OBJ_RADIO, IOCTL_ACT_RADIO_RXON, 0);
-
+#endif
+  
   /* put LED to toggle in the message */
   msg[0] = 2;  /* toggle red */
   while (1)
   {
-    SPIN_ABOUT_A_SECOND;
+    SPIN_ABOUT_A_SECOND; /* manages FHSS implicitly */
     if (delay > 0x00)
     {
-      SPIN_ABOUT_A_SECOND;
+      SPIN_ABOUT_A_SECOND; /* manages FHSS implicitly */
     }
     if (delay > 0x01)
     {
-      SPIN_ABOUT_A_SECOND;
+      SPIN_ABOUT_A_SECOND; /* manages FHSS implicitly */
     }
     if (delay > 0x02)
     {
-      SPIN_ABOUT_A_SECOND;
+      SPIN_ABOUT_A_SECOND; /* manages FHSS implicitly */
     }
 
     /* delay longer and longer -- then start over */
