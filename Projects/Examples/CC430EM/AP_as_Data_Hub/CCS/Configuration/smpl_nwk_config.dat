@@ -44,10 +44,10 @@
 # Maximum size of Network application payload. Do not change unless
 # protocol changes are reflected in different maximum network
 # application payload size.
---define=MAX_NWK_PAYLOAD=9
+--define=MAX_NWK_PAYLOAD=34
 
 # Maximum size of application payload
---define=MAX_APP_PAYLOAD=16
+--define=MAX_APP_PAYLOAD=32
 
 # Default Link token
 --define=DEFAULT_LINK_TOKEN=0x01020304
@@ -56,7 +56,10 @@
 --define=DEFAULT_JOIN_TOKEN=0x05060708
 
 # Define Frequency Agility as active for this build
---define=FREQUENCY_AGILITY
+#--define=FREQUENCY_AGILITY
+
+# Remove 'x' corruption to enable frequency hopping.
+#--define=FREQUENCY_HOPPING
 
 # Enable application autoacknowledge support. Requires extended API as well
 --define=APP_AUTO_ACK
@@ -71,4 +74,7 @@
 #--define=NVOBJECT_SUPPORT
 
 # Insert '#' to disable software timer
---define=SW_TIMER
+#--define=SW_TIMER
+
+# causes leds to blink in 00 -> 01 -> 11 -> 10 -> 00 rotation when FHSS enabled
+--define=NWK_PLL_SHOW_LOCATION_INDICATORS
