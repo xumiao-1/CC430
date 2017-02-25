@@ -5,7 +5,7 @@
    <string>defaultSolution</string>
    <void method="set">
     <object idref="SolutionManager$PersistState0"/>
-    <string>/home/test/ti/ccsv6/ccs_base/dvt_4.1.0.201507151655/CodeGen/solutions/CodeGenCoverage</string>
+    <string>C:\ti\ccsv6\ccs_base\dvt_4.1.0.201507151655\CodeGen\solutions\CodeGenCoverage</string>
    </void>
   </void>
  </object>
@@ -14,10 +14,10 @@
  <void id="ArrayList0" method="get">
   <object idref="SolutionManager$PersistState0"/>
   <void method="add">
-   <string>/home/test/workspace/SimpliciTI-CCS-111/Projects/Examples/CC430EM/AP_as_Data_Hub/CCS/dvt/AnalysisSolutionsTemp/AnalysisSolution1486485957068/null</string>
+   <string>C:\Users\Miao\Documents\GitHub\CC430\Projects\Examples\CC430EM\AP_as_Data_Hub\CCS\dvt\AnalysisSolutionsTemp\AnalysisSolution1487915650290\null</string>
   </void>
   <void method="add">
-   <string>/home/test/ti/ccsv6/ccs_base/dvt_4.1.0.201507151655/CodeGen/solutions/CodeGenCoverage</string>
+   <string>C:\ti\ccsv6\ccs_base\dvt_4.1.0.201507151655\CodeGen\solutions\CodeGenCoverage</string>
   </void>
  </void>
 </void>

@@ -27,7 +27,7 @@
 		<link>
 			<name>Applications/appcommon</name>
 			<type>2</type>
-			<location>/home/test/workspace/SimpliciTI-CCS-111/Projects/Examples/Applications/appcommon</location>
+			<location>C:/Users/Miao/Documents/GitHub/CC430/Projects/Examples/Applications/appcommon</location>
 		</link>
 		<link>
 			<name>Applications/configuration/smpl_nwk_config.dat</name>
