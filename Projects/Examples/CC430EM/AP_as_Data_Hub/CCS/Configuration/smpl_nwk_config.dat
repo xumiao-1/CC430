@@ -44,10 +44,10 @@
 # Maximum size of Network application payload. Do not change unless
 # protocol changes are reflected in different maximum network
 # application payload size.
---define=MAX_NWK_PAYLOAD=9
+--define=MAX_NWK_PAYLOAD=34
 
 # Maximum size of application payload
---define=MAX_APP_PAYLOAD=16
+--define=MAX_APP_PAYLOAD=32
 
 # Default Link token
 --define=DEFAULT_LINK_TOKEN=0x01020304
