@@ -61,8 +61,6 @@
 #error ERROR: Must define the macro APP_AUTO_ACK for this application.
 #endif
 
-//#define AWAKE_INTERVAL (5000)
-//#define AWAKE_PERIOD   (AWAKE_INTERVAL / 2)
 
 /**************************** COMMENTS ON ASYNC LISTEN APPLICATION ***********************
  Summary:
@@ -114,14 +112,6 @@
 
 /************  THIS SOURCE FILE REPRESENTS THE AUTOMATIC NOTIFICATION SOLUTION ************/
 
-/* reserve space for the maximum possible peer Link IDs */
-//static linkID_t sLID[NUM_CONNECTIONS] = { 0 };
-//static uint8_t sNumCurrentPeers = 0;
-/* callback handler */
-static uint8_t sCB(linkID_t);
-
-/* received message handler */
-//static void processMessage(linkID_t, uint8_t *, uint8_t);
 /* Frequency Agility helper functions */
 //static void checkChangeChannel(void);
 //static void changeChannel(void);
@@ -145,7 +135,6 @@ static volatile uint8_t sBlinky = 0;
 
 /*     ************** END interference detection support                       */
 
-#define SPIN_ABOUT_A_QUARTER_SECOND   NWK_DELAY(250)
 #define FLASH_ADDRESS (0x05)
 
 // copy the values from the module into a set of shadow registers in RAM
@@ -164,16 +153,7 @@ static volatile uint8_t sBlinky = 0;
 
 void main(void) {
     /* init the node */
-#if 1
     node_init();
-#else
-    BSP_Init();
-    /* init task pool */
-    task_pool_init();
-    rtc_init();
-    lpw_init();
-    soft_initTimers();
-#endif
 
     /* If an on-the-fly device address is generated it must be done before the
      * call to SMPL_Init(). If the address is set here the ROM value will not
@@ -189,14 +169,8 @@ void main(void) {
     }
 #endif /* I_WANT_TO_CHANGE_DEFAULT_ROM_DEVICE_ADDRESS_PSEUDO_CODE */
 
-
-    while (SMPL_SUCCESS != SMPL_Init(sCB)) {
-        node_toggle_red_led();
-        SPIN_ABOUT_A_QUARTER_SECOND;
-    }
-    /* green and red LEDs on solid to indicate waiting for a Join. */
-    node_turn_on_green_led();
-    node_turn_off_red_led();
+    node_setPhase(STARTUP);
+    post_task(wrkstn_taskStartup, STARTUP_STAGE_INIT);
 
 //	/* test flash */
 //	ExtenalFlash_Read((uint8_t*) rdbuf, FLASH_ADDRESS, strlen(buf));
@@ -209,7 +183,6 @@ void main(void) {
 
     /* main work loop */
 #if 1
-    soft_setTimer(AWAKE_INTERVAL, node_awakeISR, 0);
     while (1) {
         task_scheduler();
     }
@@ -226,35 +199,7 @@ void main(void) {
 #endif
 
 }
-//void main(void) {
-//
-//    memset(sSample, 0x0, sizeof(sSample));
-//
-//    /* green and red LEDs on solid to indicate waiting for a Join. */
-//    BSP_Init();
-//    bsp_turn_on_green_led();
-//    bsp_turn_on_red_led();
-//
-//    /* main work loop */
-//    TA0CCTL0 = CCIE;
-//    TA0CTL = TASSEL_2 + MC_2;
-//
-//    __enable_interrupt();
-//    __bis_SR_register(LPM0 + GIE); // LPM0 with interrupts enabled
-//}
 
-/* Runs in ISR context. Reading the frame should be done in the */
-/* application thread not in the ISR thread. */
-static uint8_t sCB(linkID_t lid) {
-    if (lid) {
-        post_task(wrkstn_task_readFrame, (uint16_t) lid);
-    } else {
-        post_task(wrkstn_task_addDevice, 0);
-    }
-
-    /* leave frame to be read by application. */
-    return 0;
-}
 
 //static void changeChannel(void) {
 //#ifdef FREQUENCY_AGILITY
@@ -299,16 +244,7 @@ static uint8_t sCB(linkID_t lid) {
 //#endif
 //	return;
 //}
-//unsigned int timerCount = 0;
-//// Timer A0 interrupt service routine
-//#pragma vector=TIMER0_A0_VECTOR
-//__interrupt void Timer_A(void) {
-//    timerCount = (timerCount + 1) % 128;
-//    if (timerCount == 0) {
-//        bsp_toggle_green_led();
-//        bsp_toggle_red_led();
-//    }
-//}
+
 #if 0
 #pragma vector=TIMER0_A1_VECTOR
 __interrupt void TIMER0_A1_ISR(void) {

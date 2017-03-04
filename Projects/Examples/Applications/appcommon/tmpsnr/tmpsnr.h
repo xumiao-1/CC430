@@ -3,9 +3,9 @@
 #ifndef _TMPSNR_H_
 #define _TMPSNR_H_
 
-//#include "bsp.h"
-//#include "mydef.h"
 
+
+void tmpsnr_taskStartup(uint16_t);
 void tmpsnr_taskMain(uint16_t);
 void tmpsnr_taskSleep(uint16_t);
 void tmpsnr_registerMsgProcessor(void);

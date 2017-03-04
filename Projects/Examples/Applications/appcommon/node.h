@@ -24,12 +24,70 @@
 #define node_is_red_led_on()        BSP_LED2_IS_ON()
 
 
+
+
+/**************************************************
+ * DATA STRUCTURES
+ *************************************************/
+
+typedef enum {
+        NODEOFF = 0,
+        STARTUP,
+        RUNNING,
+        SPDWNLD,
+        RFDWNLD,
+} phase_t;
+
+typedef enum {
+	STARTUP_STAGE_INIT = 0,
+	STARTUP_STAGE_LINK,
+	STARTUP_STAGE_SYNC
+} startup_stage_t;
+
+
+#pragma pack (1)
+
+/**
+ * node configuration
+ */
+typedef struct {
+	/* node basic info: id, type, phase */
+	uint16_t _id;
+	uint8_t _type;
+	phase_t _phase;
+	/** the above three fields must be kept as leading fields **/
+
+//	uint32_t gSeqno; // last seqno before restart
+//	uint8_t gPDR; // PDR (4-bit): 0x0 ~ 0xF
+//	uint8_t	gRand;
+
+	/* time info: time base, next wakeup time, wakeup period */
+	uint32_t _timeBase; // how many seconds passed from 1970/1/1 since last sync
+	uint32_t _nextWkup;//RTC_TimeTypeDef nextAlarm;//
+	uint16_t _awakePeriod;	// wakeup interval
+
+	/* route info: */
+//	route_info_t gRouteInfo; // route info
+} node_config_t;
+
+#pragma pack ()
+
+
+/**************************************************
+ * GLOBAL VARIABLES
+ *************************************************/
+extern volatile uint32_t gNextWkup;
+extern /*volatile*/ node_config_t gConfig;
+
+
 /**************************************************
  * PUBLIC FUNCTIONS
  *************************************************/
 bool node_init(void);
 void node_sleepISR(uint16_t);
 void node_awakeISR(uint16_t);
+void node_setPhase(phase_t);
+
 
 
 

@@ -11,6 +11,7 @@ typedef struct {
     uint32_t expireTime;
     task_handlerFunc_t handler;
     uint16_t arg;
+    bool isImmediate;
 } soft_timer_t;
 
 #pragma pack ()
@@ -30,7 +31,9 @@ void soft_initTimers(void) {
  */
 bool soft_setTimer(uint32_t aInInterval,
         task_handlerFunc_t aInHandler,
-        uint16_t aInArg) {
+        uint16_t aInArg,
+        bool aInImmediate)
+{
     if (sUsedTimers < MAX_SOFT_TIMERS) {
         uint8_t i;
         for (i = 0; i < MAX_SOFT_TIMERS; i++) {
@@ -40,6 +43,7 @@ bool soft_setTimer(uint32_t aInInterval,
                 sSoftTimers[i].expireTime = rtc_getTimeOffset() + aInInterval * TICKS_PER_SECOND / 1000;
                 sSoftTimers[i].handler = aInHandler;
                 sSoftTimers[i].arg = aInArg;
+                sSoftTimers[i].isImmediate = aInImmediate;
 
                 BSP_ENTER_CRITICAL_SECTION(lState);
                 sUsedTimers++;
@@ -61,7 +65,11 @@ void soft_ISR(uint32_t aInCurTime) {
                     && sSoftTimers[i].expireTime <= aInCurTime) {
 
                 /* timer handler */
-                sSoftTimers[i].handler(sSoftTimers[i].arg);
+                if (sSoftTimers[i].isImmediate) {
+                    sSoftTimers[i].handler(sSoftTimers[i].arg);
+                } else {
+                    post_task(sSoftTimers[i].handler, sSoftTimers[i].arg);
+                }
 
                 /* clear this timer */
                 sSoftTimers[i].handler = NULL;

@@ -25,12 +25,11 @@ static linkID_t sLID[NUM_CONNECTIONS] = { 0 };
 static uint8_t sNumCurrentPeers = 0;
 static msg_processor_t sMsgProcessor[RF_CMD_END];
 
-//void processMessage(linkID_t aInLid, uint8_t aInMsg, uint8_t aInLen);
 void wrkstn_processSyncReq(pkt_app_t *);
 void wrkstn_processSyncRep(pkt_app_t *);
 void wrkstn_processTmpData(pkt_app_t *);
 
-void sendTimeSync(linkID_t);
+bool sendTimeSyncReply(linkID_t);
 
 
 void wrkstn_taskMain(uint16_t arg)
@@ -44,13 +43,13 @@ void wrkstn_taskMain(uint16_t arg)
             (uint32_t)gNextWkup);
 
     /* awake for 3s */
-    soft_setTimer(AWAKE_PERIOD, node_sleepISR, 0);
+    soft_setTimer(AWAKE_PERIOD, node_sleepISR, 0, true);
 
     /* wake up again after 10s */
     if (gNextWkup <= rtc_getTimeOffset()) {
         log(LOG_WARNING, "next wakeup time <= current time");
     } else {
-        soft_setTimer(gNextWkup-rtc_getTimeOffset(), node_awakeISR, 0);
+        soft_setTimer(gNextWkup-rtc_getTimeOffset(), node_awakeISR, 0, true);
     }
 }
 
@@ -66,6 +65,40 @@ void wrkstn_registerMsgProcessor(void)
     sMsgProcessor[RF_CMD_SYNC_REQ] = wrkstn_processSyncReq;
     sMsgProcessor[RF_CMD_SYNC_REP] = wrkstn_processSyncRep;
     sMsgProcessor[RF_CMD_DATA_TMP] = wrkstn_processTmpData;
+}
+
+/**
+ * Runs in ISR context. Reading the frame should be done in the
+ * application thread not in the ISR thread.
+ */
+static uint8_t sCB(linkID_t lid) {
+    if (lid) {
+        post_task(wrkstn_task_readFrame, (uint16_t) lid);
+    } else {
+        post_task(wrkstn_task_addDevice, 0);
+    }
+
+    /* leave frame to be read by application. */
+    return 0;
+}
+
+void wrkstn_taskStartup(uint16_t aInStartupStage)
+{
+    if (STARTUP != gConfig._phase) {
+        return;
+    }
+
+    switch (aInStartupStage) {
+    case STARTUP_STAGE_INIT:
+        log(LOG_DEBUG, "Trying to init AP...");
+        if (SMPL_SUCCESS == SMPL_Init(sCB)) {
+            node_setPhase(RUNNING);
+            post_task(node_awakeISR, 0);
+        } else {
+            node_toggle_red_led();
+            soft_setTimer(250, wrkstn_taskStartup, aInStartupStage, false);
+        }
+    }
 }
 
 void wrkstn_task_readFrame(uint16_t arg) {
@@ -109,9 +142,6 @@ void wrkstn_task_addDevice(uint16_t arg) {
                 log(LOG_DEBUG, "End device added: sLID[%u] = %u",
                         (uint32_t)sNumCurrentPeers,
                         (uint32_t)sLID[sNumCurrentPeers]);
-
-                /* reply with my time stamp */
-                sendTimeSync(sLID[sNumCurrentPeers]);
                 break;
             }
             /* Implement fail-to-link policy here. otherwise, listen again. */
@@ -123,7 +153,16 @@ void wrkstn_task_addDevice(uint16_t arg) {
 
 void wrkstn_processSyncReq(pkt_app_t *aInPkt)
 {
+    log(LOG_DEBUG, "enter into processSyncReq");
 
+    if (0 == gNextWkup) {
+        return;
+    }
+
+    log(LOG_DEBUG, "RF_CMD_SYNC_REQ: link %u",
+            (uint32_t)(aInPkt->hdr.nodeid));
+
+    sendTimeSyncReply((linkID_t)aInPkt->hdr.nodeid);
 }
 
 void wrkstn_processSyncRep(pkt_app_t *aInPkt)
@@ -136,19 +175,19 @@ void wrkstn_processTmpData(pkt_app_t *aInPkt)
 
 }
 
-void sendTimeSync(linkID_t aInLid)
+bool sendTimeSyncReply(linkID_t aInLid)
 {
-	pkt_app_t lPkt = {0};
-	lPkt.hdr.nodeid = (uint16_t)aInLid;
-	lPkt.hdr.cmd = RF_CMD_SYNC_REP;
-	lPkt.hdr.rssi = 0;
+    pkt_app_t lPkt = {0};
+    lPkt.hdr.nodeid = (uint16_t)aInLid;
+    lPkt.hdr.cmd = RF_CMD_SYNC_REP;
+    lPkt.hdr.rssi = 0;
 
-    app_msg_t lMsg;
+    app_msg_sync_req_t lMsg;
     lMsg.fTimeOffset = rtc_getTimeOffset();
     lMsg.fTimeWkup = gNextWkup;
     memcpy(lPkt.data, (uint8_t*)&lMsg, sizeof(lMsg));
 
-    log(LOG_DEBUG, "Sending pkt (link %u: %u,%u)......",
+    log(LOG_DEBUG, "Sending sync reply (link %u: %u,%u)......",
             (uint32_t)aInLid,
             (uint32_t)lMsg.fTimeOffset,
             (uint32_t)lMsg.fTimeWkup);
@@ -156,13 +195,13 @@ void sendTimeSync(linkID_t aInLid)
     smplStatus_t rc = SMPL_SendOpt(
             aInLid,
             (uint8_t*)&lPkt,
-            sizeof(pkt_app_header_t) + sizeof(app_msg_t),//sizeof(lPkt),//
+            sizeof(pkt_app_header_t) + sizeof(app_msg_sync_req_t),
             SMPL_TXOPTION_ACKREQ);
-    if (SMPL_SUCCESS == rc) {
-        log(LOG_DEBUG, "succeeded");
-    } else {
-        log(LOG_DEBUG, "failed");
+    if (SMPL_SUCCESS != rc) {
+        log(LOG_DEBUG, "Sending RF_CMD_SYNC_REP failed");
     }
+
+    return SMPL_SUCCESS == rc;
 }
 //#endif //WRKSTN_NODE
 // eof...

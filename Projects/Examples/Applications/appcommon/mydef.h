@@ -34,12 +34,11 @@ typedef struct {
 typedef struct {
     uint32_t fTimeOffset;
     uint32_t fTimeWkup;
-} app_msg_t;
+} app_msg_sync_req_t;
 
 #pragma pack ()
 
 
-extern uint32_t gNextWkup;
 
 
 

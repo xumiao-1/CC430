@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include "bsp.h"
 #include "mydef.h"
+#include "utils.h"
 #include "node.h"
 #include "rtc_cc430.h"
 #include "lpw_cc430.h"
@@ -16,6 +17,12 @@
 #else
 #error ERROR: Must define a proper node type.
 #endif
+
+
+
+
+volatile uint32_t gNextWkup = 0;
+/*volatile*/ node_config_t gConfig;
 
 
 /**************************************************
@@ -73,5 +80,11 @@ void node_awakeISR(uint16_t arg)
     post_task(tmpsnr_taskMain, arg);
 #endif // defined
 }
+
+void node_setPhase(phase_t aInPhase)
+{
+	gConfig._phase = aInPhase;
+}
+
 
 //eof...

@@ -3,9 +3,8 @@
 #ifndef _WRKSTN_H_
 #define _WRKSTN_H_
 
-//#include "bsp.h"
-//#include "mydef.h"
 
+void wrkstn_taskStartup(uint16_t);
 void wrkstn_taskMain(uint16_t);
 void wrkstn_taskSleep(uint16_t);
 void wrkstn_registerMsgProcessor(void);
