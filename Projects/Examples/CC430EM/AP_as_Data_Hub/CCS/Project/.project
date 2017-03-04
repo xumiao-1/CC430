@@ -32,12 +32,12 @@
 		<link>
 			<name>Applications/appcommon/tmpsnr</name>
 			<type>2</type>
-			<location>/home/test/workspace/SimpliciTI-CCS-111/Projects/Examples/Applications/appcommon/tmpsnr</location>
+			<locationURI>DEV_ROOT/Projects/Examples/Applications/appcommon/tmpsnr</locationURI>
 		</link>
 		<link>
 			<name>Applications/appcommon/wrkstn</name>
 			<type>2</type>
-			<location>/home/test/workspace/SimpliciTI-CCS-111/Projects/Examples/Applications/appcommon/wrkstn</location>
+			<locationURI>DEV_ROOT/Projects/Examples/Applications/appcommon/wrkstn</locationURI>
 		</link>
 		<link>
 			<name>Applications/configuration/smpl_nwk_config.dat</name>
