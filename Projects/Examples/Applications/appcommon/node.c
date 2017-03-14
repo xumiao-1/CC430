@@ -21,6 +21,7 @@
 
 
 
+volatile int8_t gWkupTimerSlot = -1;
 volatile uint32_t gNextWkup = 0;
 /*volatile*/ node_config_t gConfig;
 
@@ -51,35 +52,35 @@ bool node_init(void)
     return true;
 }
 
-void node_sleepISR(uint16_t arg)
-{
-    /* actions before going to sleep */
-#if defined(ACCESS_POINT)
-    post_task(wrkstn_taskSleep, arg);
-#elif defined(END_DEVICE)
-    post_task(tmpsnr_taskSleep, arg);
-#endif // defined
-}
+//void node_sleepISR(uint16_t arg)
+//{
+//    /* actions before going to sleep */
+//#if defined(ACCESS_POINT)
+//    post_task(wrkstn_taskSleep, arg);
+//#elif defined(END_DEVICE)
+//    post_task(tmpsnr_taskSleep, arg);
+//#endif // defined
+//}
 
-void node_awakeISR(uint16_t arg)
-{
-    /* exit low power mode */
-    lpw_exitSleep();
-
-    /* update next wakeup schedule */
-    if (gNextWkup) {
-        gNextWkup += AWAKE_INTERVAL;
-    } else {
-        gNextWkup =  rtc_getTimeOffset() + AWAKE_INTERVAL;
-    }
-
-    /* actions after wakeup */
-#if defined(ACCESS_POINT)
-    post_task(wrkstn_taskMain, arg);
-#elif defined(END_DEVICE)
-    post_task(tmpsnr_taskMain, arg);
-#endif // defined
-}
+//void node_awakeISR(uint16_t arg)
+//{
+//    /* exit low power mode */
+////    lpw_exitSleep();
+//
+//    /* update next wakeup schedule */
+////    if (gNextWkup) {
+////        gNextWkup += AWAKE_INTERVAL;
+////    } else {
+////        gNextWkup =  rtc_getTimeOffset() + AWAKE_INTERVAL;
+////    }
+//
+//    /* actions after wakeup */
+//#if defined(ACCESS_POINT)
+//    post_task(wrkstn_taskMain, arg);
+//#elif defined(END_DEVICE)
+//    post_task(tmpsnr_taskMain, arg);
+//#endif // defined
+//}
 
 void node_setPhase(phase_t aInPhase)
 {

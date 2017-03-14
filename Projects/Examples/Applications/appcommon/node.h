@@ -76,6 +76,7 @@ typedef struct {
 /**************************************************
  * GLOBAL VARIABLES
  *************************************************/
+extern volatile int8_t gWkupTimerSlot;
 extern volatile uint32_t gNextWkup;
 extern /*volatile*/ node_config_t gConfig;
 
@@ -84,8 +85,8 @@ extern /*volatile*/ node_config_t gConfig;
  * PUBLIC FUNCTIONS
  *************************************************/
 bool node_init(void);
-void node_sleepISR(uint16_t);
-void node_awakeISR(uint16_t);
+//void node_sleepISR(uint16_t);
+//void node_awakeISR(uint16_t);
 void node_setPhase(phase_t);
 
 

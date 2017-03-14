@@ -1,8 +1,8 @@
 #ifndef _MY_RTC_CC430_H_
 #define _MY_RTC_CC430_H_
 
-#include <stdbool.h>
-#include "bsp.h"
+//#include <stdbool.h>
+//#include "bsp.h"
 
 #define TICKS_PER_SECOND (1024)
 

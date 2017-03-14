@@ -1,4 +1,4 @@
-#include <string.h>
+#include "includes.h"
 #include "soft_timer.h"
 #include "rtc_cc430.h"
 #include "utils.h"
@@ -11,7 +11,7 @@ typedef struct {
     uint32_t expireTime;
     task_handlerFunc_t handler;
     uint16_t arg;
-    bool isImmediate;
+    //bool isImmediate;
 } soft_timer_t;
 
 typedef struct tag_timer_node {
@@ -23,12 +23,21 @@ typedef struct tag_timer_node {
 
 #define MAX_SOFT_TIMERS (8)
 
-static timer_node_t *sUsedSlots = NULL;
-static timer_node_t sSoftTimers[MAX_SOFT_TIMERS] = {0};
+static  timer_node_t * sFreeSlots = NULL;
+static  timer_node_t * sUsedSlots = NULL;
+static  timer_node_t sSoftTimers[MAX_SOFT_TIMERS] = {0};
 
-void soft_initTimers(void) {
-    sUsedSlots = NULL;
+void soft_initTimers(void)
+{
+    uint8_t i = 0;
     memset(sSoftTimers, 0, sizeof(timer_node_t) * MAX_SOFT_TIMERS);
+
+    for ( ; i < (MAX_SOFT_TIMERS-1); i++ ) {
+        sSoftTimers[i]._next = sSoftTimers + (i + 1);
+    }
+
+    sFreeSlots = sSoftTimers;
+    sUsedSlots = NULL;
 }
 
 /**
@@ -36,35 +45,27 @@ void soft_initTimers(void) {
  */
 int8_t soft_setTimer(uint32_t aInInterval,
         task_handlerFunc_t aInHandler,
-        uint16_t aInArg,
-        bool aInImmediate)
+        uint16_t aInArg)
 {
-    uint32_t lExpireTime = rtc_getTimeOffset() + aInInterval * TICKS_PER_SECOND / 1000;
-
-    /* find an empty slot from sSoftTimers */
-    uint8_t i = 0;
-    timer_node_t *lSlot = sSoftTimers;
-    while (i < MAX_SOFT_TIMERS) {
-        if (NULL == lSlot->_entry.handler) {
-            break;
-        }
-        i++;
-        lSlot++;
-    }
-
-    if (MAX_SOFT_TIMERS == i) {
+    if ( NULL == sFreeSlots ) {
         return -1;
     }
+
+    uint32_t lExpireTime = aInInterval * TICKS_PER_SECOND / 1000;
+    BSP_CRITICAL_STATEMENT( lExpireTime += rtc_getTimeOffset() );
+
+    /* get an empty slot from sFreeSlots */
+    timer_node_t *lSlot = sFreeSlots;
+    sFreeSlots = sFreeSlots->_next;
 
     /* fill in the slot */
     lSlot->_entry.expireTime = lExpireTime;
     lSlot->_entry.handler = aInHandler;
     lSlot->_entry.arg = aInArg;
-    lSlot->_entry.isImmediate = aInImmediate;
 
-    bspIState_t lState;
+    //bspIState_t lState;
     /* find the right position in sUsedSlots */
-    BSP_ENTER_CRITICAL_SECTION(lState);
+    //BSP_ENTER_CRITICAL_SECTION(lState);
     timer_node_t *lPreCursor = NULL;
     timer_node_t *lCursor = sUsedSlots;
     while (lCursor != NULL) {
@@ -83,31 +84,31 @@ int8_t soft_setTimer(uint32_t aInInterval,
         sUsedSlots = lSlot;
         lSlot->_next = lCursor;
     }
-    BSP_EXIT_CRITICAL_SECTION(lState);
+    //BSP_EXIT_CRITICAL_SECTION(lState);
 
     /* return the index of the slot in sSoftTimers */
     return lSlot - sSoftTimers;
 }
 
-void soft_ISR(uint32_t aInCurTime)
+void soft_process(void)
 {
+    uint32_t lTimeStamp = 0;
+
     while (sUsedSlots != NULL) {
-        if (sUsedSlots->_entry.expireTime > aInCurTime) {
+        BSP_CRITICAL_STATEMENT( lTimeStamp = rtc_getTimeOffset() );
+
+        if (lTimeStamp < sUsedSlots->_entry.expireTime) {
             return;
         }
 
         /* it's the time to deal with the handler */
-        if (sUsedSlots->_entry.isImmediate) {
-            sUsedSlots->_entry.handler(sUsedSlots->_entry.arg);
-        } else {
-            post_task(sUsedSlots->_entry.handler, sUsedSlots->_entry.arg);
-        }
+        sUsedSlots->_entry.handler(sUsedSlots->_entry.arg);
 
-        /* clear this timer */
-        sUsedSlots->_entry.handler = NULL;
+        /* free the slot */
+        timer_node_t *lSlot = sUsedSlots;
         sUsedSlots = sUsedSlots->_next;
+        lSlot->_next = sFreeSlots;
+        sFreeSlots = lSlot;
     }
-
-    return;
 }
 // eof...

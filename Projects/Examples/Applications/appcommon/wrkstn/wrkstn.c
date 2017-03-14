@@ -37,19 +37,23 @@ void wrkstn_taskMain(uint16_t arg)
     node_turn_on_green_led();
     node_turn_on_red_led();
 
+    /* update next wakeup time */
+    gNextWkup += AWAKE_INTERVAL;
+    uint32_t lCurTime = rtc_getTimeOffset();
+
     /* send time stamp to peers */
     log(LOG_DEBUG, "[wrkstn] time = %u, next wkup = %u",
-            (uint32_t)rtc_getTimeOffset(),
+            (uint32_t)lCurTime,
             (uint32_t)gNextWkup);
 
     /* awake for 3s */
-    soft_setTimer(AWAKE_PERIOD, node_sleepISR, 0, true);
+    soft_setTimer(AWAKE_PERIOD, wrkstn_taskSleep, 0);
 
     /* wake up again after 10s */
-    if (gNextWkup <= rtc_getTimeOffset()) {
+    if (gNextWkup <= lCurTime) {
         log(LOG_WARNING, "next wakeup time <= current time");
     } else {
-        soft_setTimer(gNextWkup-rtc_getTimeOffset(), node_awakeISR, 0, true);
+        gWkupTimerSlot = soft_setTimer(gNextWkup-lCurTime, wrkstn_taskMain, 0);
     }
 }
 
@@ -92,11 +96,12 @@ void wrkstn_taskStartup(uint16_t aInStartupStage)
     case STARTUP_STAGE_INIT:
         log(LOG_DEBUG, "Trying to init AP...");
         if (SMPL_SUCCESS == SMPL_Init(sCB)) {
+            gNextWkup = rtc_getTimeOffset() + AWAKE_INTERVAL;
+            gWkupTimerSlot = soft_setTimer(AWAKE_INTERVAL, wrkstn_taskMain, 0);
             node_setPhase(RUNNING);
-            post_task(node_awakeISR, 0);
         } else {
             node_toggle_red_led();
-            soft_setTimer(250, wrkstn_taskStartup, aInStartupStage, false);
+            soft_setTimer(250, wrkstn_taskStartup, aInStartupStage);
         }
     }
 }

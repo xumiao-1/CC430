@@ -62,7 +62,7 @@ void tmpsnr_taskStartup(uint16_t aInStartupStage)
             log(LOG_DEBUG, "Joined! Enter into STARTUP_STAGE_LINK");
         } else {
             node_toggle_red_led();
-            soft_setTimer(250, tmpsnr_taskStartup, aInStartupStage, false);
+            soft_setTimer(250, tmpsnr_taskStartup, aInStartupStage);
         }
         break;
 
@@ -77,13 +77,13 @@ void tmpsnr_taskStartup(uint16_t aInStartupStage)
             log(LOG_DEBUG, "Linked! Enter into STARTUP_STAGE_SYNC");
         } else {
             node_toggle_green_led();
-            soft_setTimer(250, tmpsnr_taskStartup, aInStartupStage, false);
+            soft_setTimer(250, tmpsnr_taskStartup, aInStartupStage);
         }
         break;
 
     case STARTUP_STAGE_SYNC:
         sendTimeSyncRequest(sLinkID1);
-        soft_setTimer(250, tmpsnr_taskStartup, aInStartupStage, false);
+        soft_setTimer(250, tmpsnr_taskStartup, aInStartupStage);
         break;
     }
 }
@@ -93,16 +93,24 @@ void tmpsnr_taskMain(uint16_t arg)
     node_turn_on_green_led();
     node_turn_on_red_led();
 
+    /* update next wakeup time */
+    gNextWkup += AWAKE_INTERVAL;
+    uint32_t lCurTime = rtc_getTimeOffset();
+
     /* send time stamp to peers */
     log(LOG_DEBUG, "[tmpsnr] time = %u, next wkup = %u",
-            (uint32_t)rtc_getTimeOffset(),
+            (uint32_t)lCurTime,
             (uint32_t)gNextWkup);
 
     /* awake for 3s */
-    soft_setTimer(AWAKE_PERIOD, node_sleepISR, 0, true);
+    soft_setTimer(AWAKE_PERIOD, tmpsnr_taskSleep, 0);
 
     /* wake up again after a while */
-    soft_setTimer(gNextWkup-rtc_getTimeOffset(), node_awakeISR, 0, true);
+    if (gNextWkup <= lCurTime) {
+        log(LOG_WARNING, "next wakeup time <= current time");
+    } else {
+        gWkupTimerSlot = soft_setTimer(gNextWkup-lCurTime, tmpsnr_taskMain, 0);
+    }
 }
 
 void tmpsnr_taskSleep(uint16_t arg)
@@ -173,8 +181,8 @@ void tmpsnr_processSyncRep(pkt_app_t *aInPkt)
 
     /* sleep */
     if (STARTUP == gConfig._phase) {
+        gWkupTimerSlot = soft_setTimer(gNextWkup - lMsg->fTimeOffset, tmpsnr_taskMain, 0);
 		node_setPhase(RUNNING);
-		post_task(tmpsnr_taskMain, 0);
     }
 
     return;

@@ -2,11 +2,12 @@
 #define _INCLUDES_H_
 
 
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 #include <stdarg.h>
 
-#include "bsp_msp430_defs.h"
+#include "bsp.h"
 
 #endif // _INCLUDES_H_
 

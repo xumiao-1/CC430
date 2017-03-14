@@ -19,10 +19,9 @@ void soft_initTimers(void);
 int8_t soft_setTimer(
         uint32_t aInInterval,
         task_handlerFunc_t aInHandler,
-        uint16_t aInArg,
-        bool aInImmediate);
+        uint16_t aInArg);
 
-void soft_ISR(uint32_t aInCurTime);
+void soft_process(void);
 
 
 #endif // _MY_SOFT_TIMER_H_

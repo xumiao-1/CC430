@@ -1,6 +1,8 @@
+#include "includes.h"
 #include "rtc_cc430.h"
 #include "lpw_cc430.h"
 #include "soft_timer.h"
+#include "node.h"
 
 /**
  * keep two uint32_t variables:
@@ -83,8 +85,12 @@ __interrupt void RTC_ISR(void) {
         lTim1 = ((uint32_t) RTCTIM1) << 16;
         sTimeOffset = lTim1 | lTim0;
 
-        /* soft timer ISR */
-        soft_ISR(sTimeOffset);
+//        /* soft timer ISR */
+//        soft_ISR(sTimeOffset);
+        if (-1 != gWkupTimerSlot && gNextWkup <= sTimeOffset) {
+//            gNextWkup =  sTimeOffset + AWAKE_INTERVAL;
+            lpw_exitSleep();
+        }
 
         break;
 

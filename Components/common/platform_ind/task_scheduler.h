@@ -9,6 +9,7 @@
 
 
 /** task structure definition */
+typedef uint16_t ring_pos_t;
 typedef void (*task_handlerFunc_t)(uint16_t arg);
 
 #pragma pack (1)
@@ -18,14 +19,15 @@ typedef struct {
     uint16_t arg;
 } task_t;
 
-typedef struct {
-    task_t volatile * head;
-    task_t volatile * tail;
-    uint8_t volatile pool_used;
-//    uint8_t volatile pool_free;
-} cb_task_t;
+//typedef struct {
+//    task_t volatile * head;
+//    task_t volatile * tail;
+//    uint8_t volatile pool_used;
+////    uint8_t volatile pool_free;
+//} cb_task_t;
 
 #pragma pack ()
+
 
 
 void task_pool_init(void);
