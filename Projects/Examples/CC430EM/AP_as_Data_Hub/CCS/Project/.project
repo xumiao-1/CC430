@@ -30,16 +30,6 @@
 			<locationURI>DEV_ROOT/Projects/Examples/Applications/appcommon/node.c</locationURI>
 		</link>
 		<link>
-			<name>Applications/appcommon/tmpsnr</name>
-			<type>2</type>
-			<locationURI>DEV_ROOT/Projects/Examples/Applications/appcommon/tmpsnr</locationURI>
-		</link>
-		<link>
-			<name>Applications/appcommon/wrkstn</name>
-			<type>2</type>
-			<locationURI>DEV_ROOT/Projects/Examples/Applications/appcommon/wrkstn</locationURI>
-		</link>
-		<link>
 			<name>Applications/configuration/smpl_nwk_config.dat</name>
 			<type>1</type>
 			<locationURI>DEV_ROOT/Projects/Examples/CC430EM/AP_as_Data_Hub/CCS/Configuration/smpl_nwk_config.dat</locationURI>
@@ -215,6 +205,11 @@
 			<locationURI>DEV_ROOT/Projects/Examples/Applications/main_AP_Async_Listen_autoack.c</locationURI>
 		</link>
 		<link>
+			<name>Applications/application/Access Point/wrkstn.c</name>
+			<type>1</type>
+			<locationURI>DEV_ROOT/Projects/Examples/Applications/appcommon/wrkstn/wrkstn.c</locationURI>
+		</link>
+		<link>
 			<name>Applications/application/Channel Sniffer/main_ED_Sniffer.c</name>
 			<type>1</type>
 			<locationURI>DEV_ROOT/Projects/Examples/Applications/main_ED_Sniffer.c</locationURI>
@@ -228,6 +223,11 @@
 			<name>Applications/application/End Device/main_manyEDs_autoack.c</name>
 			<type>1</type>
 			<locationURI>DEV_ROOT/Projects/Examples/Applications/main_manyEDs_autoack.c</locationURI>
+		</link>
+		<link>
+			<name>Applications/application/End Device/tmpsnr.c</name>
+			<type>1</type>
+			<locationURI>DEV_ROOT/Projects/Examples/Applications/appcommon/tmpsnr/tmpsnr.c</locationURI>
 		</link>
 		<link>
 			<name>Applications/application/Range Extender/main_AP_RE.c</name>
