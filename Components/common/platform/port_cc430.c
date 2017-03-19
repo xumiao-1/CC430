@@ -24,7 +24,7 @@ __interrupt void PORT2_ISR(void) {
         /* clear P2.0 IFG */
         P2IFG &= ~BIT0;
         /* exit from LPM3 */
-        __bic_SR_register_on_exit(LPM3_bits);
+        __bic_SR_register_on_exit(LPM4_bits/*LPM3_bits*/);
     } break;
 
     case P2IV_P2IFG1: break;

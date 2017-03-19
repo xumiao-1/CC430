@@ -90,6 +90,43 @@ int8_t soft_setTimer(uint32_t aInInterval,
     return lSlot - sSoftTimers;
 }
 
+void soft_cancelTimer(int8_t aInSlotId)
+{
+    if (aInSlotId < 0) {
+        log(LOG_WARNING, "soft_cancelTimer: slot id is negative");
+        return;
+    }
+
+    /* find the slot and free it */
+    timer_node_t *lPreSlot = NULL;
+    timer_node_t *lSlot = sUsedSlots;
+    while (lSlot != NULL) {
+        if (lSlot == &sSoftTimers[aInSlotId]) {
+            break;
+        }
+
+        lPreSlot = lSlot;
+        lSlot = lSlot->_next;
+    }
+
+    if (!lSlot) {
+        log(LOG_WARNING, "soft_cancelTimer: the slot is already freed");
+        return;
+    }
+
+    /* slot found, now free it */
+    if (NULL != lPreSlot) {
+        lPreSlot->_next = lSlot->_next;
+    } else {
+        sUsedSlots = lSlot->_next;
+    }
+
+    lSlot->_entry.handler = NULL;
+    lSlot->_next = sFreeSlots;
+    sFreeSlots = lSlot;
+    return;
+}
+
 void soft_process(void)
 {
     uint32_t lTimeStamp = 0;
@@ -102,11 +139,14 @@ void soft_process(void)
         }
 
         /* it's the time to deal with the handler */
-        sUsedSlots->_entry.handler(sUsedSlots->_entry.arg);
+        if (sUsedSlots->_entry.handler) {
+            sUsedSlots->_entry.handler(sUsedSlots->_entry.arg);
+        }
 
         /* free the slot */
         timer_node_t *lSlot = sUsedSlots;
         sUsedSlots = sUsedSlots->_next;
+        lSlot->_entry.handler = NULL;
         lSlot->_next = sFreeSlots;
         sFreeSlots = lSlot;
     }

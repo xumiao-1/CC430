@@ -6,7 +6,11 @@
 #include "uart_cc430.h"
 
 // call this function before using any other functions in this interface
-void uart_intfc_init( void );
+//void uart_intfc_init( void );
+void uart_intfc_init(
+    uart_put_rx_data_type,
+    uart_get_tx_data_type
+);
 
 // enqueue's the message pointed to by <buff> which is of length <len>
 // and initiates its transfer across the uart.  true is returned if there

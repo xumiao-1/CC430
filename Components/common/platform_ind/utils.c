@@ -1,8 +1,4 @@
-#include <string.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include "bsp.h"
+#include "includes.h"
 #include "utils.h"
 #include "uart_intfc_cc430.h"
 

@@ -70,11 +70,6 @@ void BSP_InitDrivers(void)
   BSP_InitButtons();
 #endif
 
-#if (!defined BSP_NO_UART)
-	/* init uart */
-	uart_intfc_init();
-#endif
-
 #if (!defined BSP_NO_TMP_SENSOR)
 	/* init temperature sensor */
 	Si705x_Init();

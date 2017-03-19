@@ -21,6 +21,8 @@ int8_t soft_setTimer(
         task_handlerFunc_t aInHandler,
         uint16_t aInArg);
 
+void soft_cancelTimer(int8_t aInSlotId);
+
 void soft_process(void);
 
 

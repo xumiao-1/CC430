@@ -44,6 +44,13 @@ typedef enum {
 	STARTUP_STAGE_SYNC
 } startup_stage_t;
 
+typedef enum {
+    RUNNING_STAGE_SLEEP = 0,
+    RUNNING_STAGE_RTC_WKUP,
+    RUNNING_STAGE_UART_WKUP,
+    RUNNING_STAGE_UART_READ
+} running_stage_t;
+
 
 #pragma pack (1)
 
@@ -77,8 +84,9 @@ typedef struct {
  * GLOBAL VARIABLES
  *************************************************/
 extern volatile int8_t gWkupTimerSlot;
+extern volatile int8_t gUartWkupTimerSlot;
 extern volatile uint32_t gNextWkup;
-extern /*volatile*/ node_config_t gConfig;
+extern volatile node_config_t gConfig;
 
 
 /**************************************************

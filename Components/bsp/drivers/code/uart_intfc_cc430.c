@@ -36,7 +36,9 @@ static bool push_buffer( unsigned char** head, unsigned char* tail,
 static int pop_buffer( unsigned char* head, unsigned char** tail,
                        unsigned char* buff, unsigned char* data, int max_len );
 
-void uart_intfc_init( void )
+void uart_intfc_init(
+        uart_put_rx_data_type aInRxHandler,
+        uart_get_tx_data_type aInTxHandler)
   {
   bspIState_t istate;
 
@@ -52,8 +54,17 @@ void uart_intfc_init( void )
 
   BSP_EXIT_CRITICAL_SECTION( istate );
 
-  uart_rx_message( rx_handler ); // enable us to receive uart data
-  uart_tx_message( tx_handler ); // enable us to transmit uart data
+  if (aInRxHandler) {
+    uart_rx_message( aInRxHandler ); // enable us to receive uart data
+  } else {
+    uart_rx_message( rx_handler ); // use the default rx handler
+  }
+
+  if (aInTxHandler) {
+    uart_tx_message( aInTxHandler ); // enable us to transmit uart data
+  } else {
+    uart_tx_message( tx_handler ); // use the default tx handler
+  }
 
   return;
   }

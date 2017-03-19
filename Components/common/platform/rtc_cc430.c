@@ -85,10 +85,7 @@ __interrupt void RTC_ISR(void) {
         lTim1 = ((uint32_t) RTCTIM1) << 16;
         sTimeOffset = lTim1 | lTim0;
 
-//        /* soft timer ISR */
-//        soft_ISR(sTimeOffset);
-        if (-1 != gWkupTimerSlot && gNextWkup <= sTimeOffset) {
-//            gNextWkup =  sTimeOffset + AWAKE_INTERVAL;
+        if (-1 != gWkupTimerSlot && gNextWkup <= sTimeOffset && lpw_isSleep()) {
             lpw_exitSleep();
         }
 
