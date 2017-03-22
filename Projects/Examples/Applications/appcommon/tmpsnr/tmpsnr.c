@@ -88,13 +88,13 @@ void tmpsnr_taskStartup(uint16_t aInStartupStage)
     }
 }
 
-void tmpsnr_taskMain(uint16_t arg)
+void tmpsnr_taskRunning(uint16_t arg)
 {
     node_turn_on_green_led();
     node_turn_on_red_led();
 
     /* update next wakeup time */
-    gNextWkup += AWAKE_INTERVAL;
+    BSP_CRITICAL_STATEMENT( gNextWkup += AWAKE_INTERVAL );
     uint32_t lCurTime = rtc_getTimeOffset();
 
     /* send time stamp to peers */
@@ -109,7 +109,7 @@ void tmpsnr_taskMain(uint16_t arg)
     if (gNextWkup <= lCurTime) {
         log(LOG_WARNING, "next wakeup time <= current time");
     } else {
-        gWkupTimerSlot = soft_setTimer(gNextWkup-lCurTime, tmpsnr_taskMain, 0);
+//        gWkupTimerSlot = soft_setTimer(gNextWkup-lCurTime, tmpsnr_taskRunning, 0);
     }
 }
 
@@ -177,11 +177,12 @@ void tmpsnr_processSyncRep(pkt_app_t *aInPkt)
 
     /* set rtc time */
     rtc_setTimeOffset(lMsg->fTimeOffset);
-    gNextWkup = lMsg->fTimeWkup;
+    BSP_CRITICAL_STATEMENT( gNextWkup = lMsg->fTimeWkup );
 
     /* sleep */
     if (STARTUP == gConfig._phase) {
-        gWkupTimerSlot = soft_setTimer(gNextWkup - lMsg->fTimeOffset, tmpsnr_taskMain, 0);
+        post_task(tmpsnr_taskSleep, RUNNING_STAGE_SLEEP);
+//        gWkupTimerSlot = soft_setTimer(gNextWkup - lMsg->fTimeOffset, tmpsnr_taskRunning, 0);
 		node_setPhase(RUNNING);
     }
 

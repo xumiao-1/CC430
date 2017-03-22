@@ -6,7 +6,7 @@
 
 
 void tmpsnr_taskStartup(uint16_t);
-void tmpsnr_taskMain(uint16_t);
+void tmpsnr_taskRunning(uint16_t);
 void tmpsnr_taskSleep(uint16_t);
 void tmpsnr_registerMsgProcessor(void);
 void tmpsnr_task_readFrame(uint16_t);

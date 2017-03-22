@@ -4,6 +4,15 @@
 #include "soft_timer.h"
 #include "node.h"
 
+#if defined(ACCESS_POINT)
+#include "wrkstn.h"
+#elif defined(END_DEVICE)
+#include "tmpsnr.h"
+#else
+#error ERROR: Must define a proper node type.
+#endif // defined(ACCESS_POINT)
+
+
 /**
  * keep two uint32_t variables:
  * one for time base and one one time offset.
@@ -85,8 +94,18 @@ __interrupt void RTC_ISR(void) {
         lTim1 = ((uint32_t) RTCTIM1) << 16;
         sTimeOffset = lTim1 | lTim0;
 
-        if (-1 != gWkupTimerSlot && gNextWkup <= sTimeOffset && lpw_isSleep()) {
-            lpw_exitSleep();
+        if (gNextWkup <= sTimeOffset) {
+            if (lpw_isSleep()) {
+                lpw_exitSleep();
+            }
+
+            if (RUNNING == gConfig._phase) {
+#if defined(ACCESS_POINT)
+                post_task(wrkstn_taskRunning, RUNNING_STAGE_RTC_WKUP);
+#elif defined(END_DEVICE)
+                post_task(tmpsnr_taskRunning, RUNNING_STAGE_RTC_WKUP);
+#endif
+            }
         }
 
         break;

@@ -64,7 +64,7 @@ void wrkstn_taskRunning(uint16_t aInRunningStage)
             soft_setTimer(AWAKE_PERIOD, wrkstn_taskSleep, RUNNING_STAGE_SLEEP);
 
             /* wake up again after 10s */
-            gWkupTimerSlot = soft_setTimer(gNextWkup-lCurTime, wrkstn_taskRunning, RUNNING_STAGE_RTC_WKUP);
+//            gWkupTimerSlot = soft_setTimer(gNextWkup-lCurTime, wrkstn_taskRunning, RUNNING_STAGE_RTC_WKUP);
         } break;
 
         case RUNNING_STAGE_UART_WKUP: {
@@ -128,10 +128,10 @@ void wrkstn_taskStartup(uint16_t aInStartupStage)
     case STARTUP_STAGE_INIT:
         log(LOG_DEBUG, "Trying to init AP...");
         if (SMPL_SUCCESS == SMPL_Init(sCB)) {
-            log(LOG_DEBUG, "Init AP done. size = %u", (uint32_t)(sizeof(uart_pkt_t)));
-            gNextWkup = rtc_getTimeOffset() + AWAKE_INTERVAL;
+            log(LOG_DEBUG, "Init AP done.");
+            BSP_CRITICAL_STATEMENT( gNextWkup = rtc_getTimeOffset() + AWAKE_INTERVAL );
             post_task(wrkstn_taskSleep, RUNNING_STAGE_SLEEP);
-            gWkupTimerSlot = soft_setTimer(AWAKE_INTERVAL, wrkstn_taskRunning, RUNNING_STAGE_RTC_WKUP);
+//            gWkupTimerSlot = soft_setTimer(AWAKE_INTERVAL, wrkstn_taskRunning, RUNNING_STAGE_RTC_WKUP);
             node_setPhase(RUNNING);
         } else {
             node_toggle_red_led();
